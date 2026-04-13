@@ -1,0 +1,70 @@
+name: crypto-viz-datawarehouse
+
+include:
+  - path:
+    - ./kafka/docker-compose.yml
+    - ./postgres/docker-compose.yml
+    - ./pgadmin/docker-compose.yml
+    - ./spark/docker-compose.yml
+
+    env_file:
+      - .env.dev
+
+services:
+  # API Backend Service
+  api:
+    build:
+      context: ../../../
+      dockerfile: src/api/Dockerfile
+    container_name: crypto-viz-api
+    ports:
+      - "8000:8000"
+    env_file:
+      - ../../../src/.env
+    environment:
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      - kafka
+    restart: unless-stopped
+    networks:
+      - crypto-viz-datawarehouse-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Frontend Dashboard Service
+  frontend:
+    build:
+      context: ../../../
+      dockerfile: crypto-dashboard/Dockerfile
+    container_name: crypto-viz-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NODE_ENV=production
+    depends_on:
+      - api
+    restart: unless-stopped
+    networks:
+      - crypto-viz-datawarehouse-network
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget --no-verbose --tries=1 --spider http://localhost:3000 || exit 1",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  crypto-viz-datawarehouse-network:
+    driver: bridge
+    name: crypto-viz-datawarehouse-network
+
+      - ../../../src/.env
