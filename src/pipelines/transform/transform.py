@@ -1,7 +1,5 @@
-
 from pyspark.sql import SparkSession
 import os
-from pyspark.sql import functions as F
 from pipelines.transform.utils.data_transformer import CryptoDataTransformer
 from pipelines.transform.utils.database_reader import CryptoDatabaseReader
 
@@ -13,6 +11,7 @@ spark_session = (
 
 database_reader = CryptoDatabaseReader(spark_session)
 data_transformer = CryptoDataTransformer(spark_session)
+
 SRC_DB_NAME = os.getenv("BRONZE_DB_NAME")
 SRC_DB_PORT = os.getenv("BRONZE_DB_PORT")
 SRC_DB_HOST = os.getenv("BRONZE_DB_HOST")
@@ -34,7 +33,7 @@ src_db_props = {
     "driver": "org.postgresql.Driver"
 }
 
-dest_table_name = "crypto_prices_series"
+dest_table_name = "crypto_price_series"
 dest_jdbc_url = f"jdbc:postgresql://{DEST_DB_HOST}:{DEST_DB_PORT}/{DEST_DB_NAME}"
 dest_db_props = {
     "user": DEST_DB_USER,
@@ -44,24 +43,21 @@ dest_db_props = {
 
 
 def main():
-
-    # get data from bronze db
-    dataframe = database_reader.read_from_db(
+    # Étape 1 : lire depuis Bronze
+    raw_dataframe = database_reader.read_from_db(
         jdbc_url=src_jdbc_url,
         table_name=src_table_name,
         schema_name=schema_name,
         properties=src_db_props
     )
+    print(f"Nombre de lignes lues depuis Bronze : {raw_dataframe.count()}")
 
-    print("Data read from Bronze DB:")
-    print(dataframe.show())
+    # Étape 2 : transformer (price_series + SMA + RSI + volatilité)
+    transformed_df = data_transformer.transform(raw_dataframe)
+    print(f"Nombre de lignes après transformation : {transformed_df.count()}")
+    transformed_df.show(truncate=False)
 
-    # transform data
-    transformed_df = data_transformer.transform(
-        dataframe
-    )
-
-    # load data to silver db
+    # Étape 3 : écrire vers Silver
     database_reader.load_to_db(
         dataframe=transformed_df,
         jdbc_url=dest_jdbc_url,
@@ -69,6 +65,15 @@ def main():
         schema_name=schema_name,
         properties=dest_db_props
     )
+    print(f"Table {dest_table_name} écrite avec succès dans Silver DB")
+
+    # Étape 4 (optionnel) : calcul de corrélation séparé
+    price_series_df = data_transformer.get_price_series(raw_dataframe)
+    correlation_df = data_transformer.calculate_correlation(
+        price_series_df, granularity="daily"
+    )
+    print("Corrélations entre paires de cryptos :")
+    correlation_df.show(truncate=False)
 
     spark_session.stop()
 
