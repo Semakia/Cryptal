@@ -1,0 +1,72 @@
+services:
+  dev-bronze:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-dev_bronze_crypto_viz}
+      POSTGRES_HOST: dev_bronze
+      POSTGRES_PORT: ${POSTGRES_DB_PORT:-5433}
+    ports:
+      - ${POSTGRES_DB_PORT:-5433}:5432
+    restart: always
+    volumes:
+      - dev-bronze-volume:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER:-postgres}"]
+      interval: 1m30s
+      timeout: 30s
+      retries: 5
+      start_period: 30s
+
+  dev-silver:
+    image: postgres:16-alpine
+    profiles:
+      - dev
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-dev_bronze_crypto_viz}
+      POSTGRES_HOST: postgres_crypto_viz
+      POSTGRES_PORT: ${POSTGRES_DB_PORT:-5433}
+    ports:
+      - ${POSTGRES_DB_PORT:-5433}:5432
+    restart: always
+    volumes:
+      - dev-bronze-volume:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER:-postgres}"]
+      interval: 1m30s
+      timeout: 30s
+      retries: 5
+      start_period: 30s
+
+  dev-gold:
+    image: postgres:16-alpine
+    profiles:
+      - dev
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-dev_gold_crypto_viz}
+      POSTGRES_HOST: postgres_crypto_viz
+      POSTGRES_PORT: ${POSTGRES_DB_PORT:-5433}
+    ports:
+      - ${POSTGRES_DB_PORT:-5433}:5432
+    restart: always
+    volumes:
+      - dev-gold-volume:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER:-postgres}"]
+      interval: 1m30s
+      timeout: 30s
+      retries: 5
+      start_period: 30s
+
+volumes:
+  dev-bronze-volume:
+    name: crypto-viz-dev-bronze
+  dev-silver-volume:
+    name: crypto-viz-dev-silver
+  dev-gold-volume:
+    name: crypto-viz-dev-gold
