@@ -8,31 +8,6 @@ class CryptoDataTransformer:
     def __init__(self, spark: SparkSession):
         self.spark = spark
 
-    def get_price_series(
-        self,
-        input_dataframe: "pyspark.sql.DataFrame"
-    ) -> "pyspark.sql.DataFrame":
-        """
-        Agrège crypto_prices en crypto_price_series (time_bucket horaire).
-        Args:
-            input_dataframe: DataFrame avec colonnes coin_id, timestamp, price_usd
-        """
-        cutoff = F.current_timestamp() - F.expr("INTERVAL 30 DAYS")
-        dataframe_filtered = (
-            input_dataframe
-            .filter(F.col("price_usd").isNotNull())
-            .filter(F.col("timestamp") >= cutoff)
-        )
-        dataframe_series = (
-            dataframe_filtered
-            .withColumn(
-                "time_bucket",
-                F.date_trunc("hour", F.col("timestamp"))
-            )
-            .groupBy("coin_id", "time_bucket")
-            .agg(F.avg("price_usd").alias("price_usd"))
-        )
-        return dataframe_series
 
     def calculate_volatility(
         self,
@@ -173,12 +148,19 @@ class CryptoDataTransformer:
         """
         Pipeline complet : price_series + volatilité + SMA + RSI.
         """
-        # Étape 1 : price series
-        price_series_df = self.get_price_series(input_dataframe)
 
-        # Étape 2 : ajouter les indicateurs
-        df_with_sma = self.calculate_sma(price_series_df, window_size=20)
-        df_with_rsi = self.calculate_rsi(df_with_sma, window_size=14)
-        df_with_vol = self.calculate_volatility(df_with_rsi, granularity="daily")
+        # Étape 1 : ajouter les indicateurs
+        dataframe_with_sma = self.calculate_sma(
+            input_dataframe,
+            window_size=20
+        )
+        dataframe_with_rsi = self.calculate_rsi(
+            dataframe_with_sma,
+            window_size=14
+        )
+        dataframe_with_vol = self.calculate_volatility(
+            dataframe_with_rsi,
+            granularity="daily"
+        )
 
-        return df_with_vol
+        return dataframe_with_vol

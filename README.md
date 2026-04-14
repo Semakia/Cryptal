@@ -1,6 +1,6 @@
 # CrypTal - Real-Time Cryptocurrency Analytics Platform
 
-T-DAT-901 Epitech Project
+
 
 A full-stack application for real-time cryptocurrency analysis with continuous data collection, processing, and visualization.
 
@@ -164,6 +164,21 @@ Services will run via emulation. No action required.
 
 ---
 
-## Team
 
-T-DAT-901 Epitech Project
+
+┌─────────────────────────────────────────────────────────────────┐
+│                         PIPELINE COMPLET                         │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  [Kafka] → crypto_prices (brutes, raw)                          │
+│     ↓ Job 1 (agrégation)                                        │
+│  [Postgres Bronze] → crypto_price_series (agrégé horaire)       │
+│     ↓ Job 2 (transform.py - ANALYTIQUE)                         │
+│  - lit crypto_price_series                                      │
+│  - calcule SMA, RSI, volatilité                                 │
+│  - écrit crypto_price_series_indicators (Gold)                  │
+│     ↓ Job 3 (optionnel)                                         │
+│  - calcule corrélation                                          │
+│  - écrit crypto_correlation_matrix (Gold)                       │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘

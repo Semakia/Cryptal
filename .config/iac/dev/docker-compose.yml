@@ -6,6 +6,7 @@ include:
     - ./postgres/docker-compose.yml
     - ./pgadmin/docker-compose.yml
     - ./spark/docker-compose.yml
+    - ./airflow/docker-compose.yml
 
     env_file:
       - .env.dev
