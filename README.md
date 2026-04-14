@@ -101,21 +101,6 @@ PostgreSQL
 
 ---
 
-## 📁 Project Structure
-
-t-dat-901-crypto-viz/
-├── src/
-│   ├── api/                    # FastAPI backend
-│   ├── pipelines/
-│   │   ├── extract/           # Kafka producer
-│   │   ├── load/              # Kafka consumer
-│   │   └── transform/         # Analytics modules
-│   └── .env                   # Environment config
-├── crypto-dashboard/          # Next.js frontend
-├── .config/iac/dev/           # Docker compose files
-├── start_docker.sh            # Main launch script
-└── README.md
-
 ## Useful Commands
 
 ### View logs
