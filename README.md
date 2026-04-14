@@ -9,19 +9,7 @@
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Neon-4169E1)
 ![Spark](https://img.shields.io/badge/Spark-3.5-orange)
 
-## 📌 Overview
 
-**t-data-901-crypto_viz** is a full-stack platform that ingests, processes, and visualizes real-time cryptocurrency price data. The architecture combines:
-
-- **CoinGecko API** → market data source
-- **Kafka** → stream ingestion and messaging
-- **FastAPI** → REST API backend
-- **Neon PostgreSQL** → serverless cloud database
-- **Next.js** → interactive React dashboard
-- **Apache Spark** → distributed analytics (SMA, RSI, volatility, correlation)
-
-
-## Architecture
 
 ## 📌 Overview
 
@@ -30,7 +18,7 @@
 - **CoinGecko API** → market data source
 - **Kafka** → stream ingestion and messaging
 - **FastAPI** → REST API backend
-- **Neon PostgreSQL** → serverless cloud database
+- **PostgreSQL** → Hosted on OVH
 - **Next.js** → interactive React dashboard
 - **Apache Spark** → distributed analytics (SMA, RSI, volatility, correlation)
 
