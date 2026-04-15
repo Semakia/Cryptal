@@ -1,12 +1,10 @@
 """
 Correlation Calculator for Crypto Portfolio Diversification
 Calculates correlation matrix to help build diversified portfolios.
+Source: crypto_prices_series table (Silver layer)
 """
-
-import os
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
-
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
@@ -20,6 +18,7 @@ class CorrelationCalculator:
     - Full correlation matrix
     - Diversification score
     - Portfolio recommendations
+
     """
 
     def __init__(self, db_config: Dict[str, str]):
@@ -27,7 +26,7 @@ class CorrelationCalculator:
         Initialize calculator with database connection.
 
         Args:
-            db_config: Database configuration dict
+            db_config: Database configuration dict (SILVER_DB_*)
         """
         self.db_config = db_config
         self.conn = None
@@ -42,130 +41,145 @@ class CorrelationCalculator:
                 password=self.db_config["password"],
                 port=self.db_config.get("port", 5432),
                 sslmode="require",
-                cursor_factory=RealDictCursor,
             )
 
-    def close(self):
-        """Close database connection."""
-        if self.conn and not self.conn.closed:
-            self.conn.close()
-
-    def get_price_series(
-        self, coin_id: str, days: int = 30
-    ) -> List[Tuple[datetime, float]]:
+    def get_price_history(self, coin_id: str, start_date: str = None,
+                          end_date: str = None) -> List[Dict]:
         """
-        Get price time series for a cryptocurrency.
+        Fetch hourly price history for a cryptocurrency from
+         crypto_prices_series.
 
         Args:
             coin_id: Cryptocurrency identifier
-            days: Number of days to look back
+            start_date: Start date in 'YYYY-MM-DD' format (optional)
+            end_date: End date in 'YYYY-MM-DD' format (optional)
 
         Returns:
-            List of (timestamp, price) tuples
+            List of dicts with price history data
         """
         self.connect()
-        cursor = self.conn.cursor()
+        cursor = self.conn.cursor(cursor_factory=RealDictCursor)
 
-        cursor.execute(
-            """
-            SELECT timestamp, price_usd
-            FROM crypto_prices
-            WHERE coin_id = %s
-              AND price_usd IS NOT NULL
-              AND timestamp >= NOW() - INTERVAL '1 day' * %s
-            ORDER BY timestamp ASC;
-        """,
-            (coin_id, days),
-        )
+        conditions = ["coin_id = %s"]
+        params = [coin_id]
 
-        result = [
-            (row["timestamp"], float(row["price_usd"])) for row in cursor.fetchall()
-        ]
+        if start_date:
+            conditions.append("time_bucket >= %s")
+            params.append(start_date)
+        if end_date:
+            conditions.append("time_bucket <= %s")
+            params.append(end_date)
+
+        query = f"""
+            SELECT time_bucket, price_usd
+            FROM crypto_prices_series
+            WHERE {' AND '.join(conditions)}
+            ORDER BY time_bucket ASC
+        """
+
+        cursor.execute(query, tuple(params))
+        results = cursor.fetchall()
         cursor.close()
 
-        return result
+        return [dict(row) for row in results]
 
-    def calculate_correlation(
-        self, coin1: str, coin2: str, days: int = 30
-    ) -> Optional[Dict]:
+    def get_returns_series(self, prices: List[float]) -> List[float]:
+        """
+        Calculate returns series from price series.
+
+        Args:
+            prices: List of prices in chronological order
+
+        Returns:
+            List of percentage returns
+        """
+        if len(prices) < 2:
+            return []
+
+        returns = []
+        for i in range(1, len(prices)):
+            ret = (prices[i] - prices[i-1]) / prices[i-1] * 100
+            returns.append(ret)
+
+        return returns
+
+    def calculate_correlation(self, coin1: str, coin2: str,
+                              start_date: str = None,
+                              end_date: str = None) -> Dict:
         """
         Calculate correlation between two cryptocurrencies.
 
         Args:
-            coin1: First cryptocurrency
-            coin2: Second cryptocurrency
-            days: Analysis period
+            coin1: First cryptocurrency identifier
+            coin2: Second cryptocurrency identifier
+            start_date: Start date in 'YYYY-MM-DD' format (optional)
+            end_date: End date in 'YYYY-MM-DD' format (optional)
 
         Returns:
-            Correlation metrics or None
+            Dict with correlation metrics
         """
-        self.connect()
-        cursor = self.conn.cursor()
+        prices1_data = self.get_price_history(coin1, start_date, end_date)
+        prices2_data = self.get_price_history(coin2, start_date, end_date)
 
-        # Get aligned price data for both coins
-        # We need matching timestamps
-        cursor.execute(
-            """
-            WITH coin1_data AS (
-                SELECT
-                    DATE_TRUNC('hour', timestamp) as time_bucket,
-                    AVG(price_usd) as price
-                FROM crypto_prices
-                WHERE coin_id = %s
-                  AND price_usd IS NOT NULL
-                  AND timestamp >= NOW() - INTERVAL '1 day' * %s
-                GROUP BY time_bucket
-            ),
-            coin2_data AS (
-                SELECT
-                    DATE_TRUNC('hour', timestamp) as time_bucket,
-                    AVG(price_usd) as price
-                FROM crypto_prices
-                WHERE coin_id = %s
-                  AND price_usd IS NOT NULL
-                  AND timestamp >= NOW() - INTERVAL '1 day' * %s
-                GROUP BY time_bucket
-            )
-            SELECT
-                CORR(c1.price, c2.price) as correlation,
-                COUNT(*) as sample_size,
-                AVG(c1.price) as coin1_avg,
-                AVG(c2.price) as coin2_avg,
-                STDDEV(c1.price) as coin1_std,
-                STDDEV(c2.price) as coin2_std
-            FROM coin1_data c1
-            INNER JOIN coin2_data c2 ON c1.time_bucket = c2.time_bucket;
-        """,
-            (coin1, days, coin2, days),
-        )
+        if not prices1_data or not prices2_data:
+            return {"error": "No price data found", "coin1": coin1, "coin2": coin2}
 
-        result = cursor.fetchone()
-        cursor.close()
+        # Align by timestamp
+        prices1 = {row["time_bucket"]: row["price_usd"] for row in prices1_data}
+        prices2 = {row["time_bucket"]: row["price_usd"] for row in prices2_data}
 
-        if not result or result["sample_size"] < 2:
-            return None
+        common_timestamps = sorted(set(prices1.keys()) & set(prices2.keys()))
 
-        correlation = float(result["correlation"]) if result["correlation"] else 0
+        if len(common_timestamps) < 10:
+            return {
+                "error": "Not enough common data points",
+                "coin1": coin1,
+                "coin2": coin2,
+                "common_points": len(common_timestamps)
+            }
+
+        prices1_aligned = [prices1[ts] for ts in common_timestamps]
+        prices2_aligned = [prices2[ts] for ts in common_timestamps]
+
+        returns1 = self.get_returns_series(prices1_aligned)
+        returns2 = self.get_returns_series(prices2_aligned)
+
+        if not returns1 or not returns2:
+            return {"error": "Not enough data for returns calculation"}
+
+        # Calculate Pearson correlation
+        n = len(returns1)
+        mean1 = sum(returns1) / n
+        mean2 = sum(returns2) / n
+
+        numerator = sum((r1 - mean1) * (r2 - mean2) for r1, r2 in zip(returns1, returns2))
+        denom1 = sum((r - mean1) ** 2 for r in returns1) ** 0.5
+        denom2 = sum((r - mean2) ** 2 for r in returns2) ** 0.5
+
+        if denom1 == 0 or denom2 == 0:
+            correlation = 0
+        else:
+            correlation = numerator / (denom1 * denom2)
 
         return {
             "coin1": coin1,
             "coin2": coin2,
-            "correlation": correlation,
-            "sample_size": result["sample_size"],
-            "period_days": days,
-            "strength": self._classify_correlation(correlation),
-            "diversification_benefit": self._diversification_benefit(correlation),
+            "correlation": round(correlation, 4),
+            "common_data_points": len(common_timestamps),
+            "start_date": common_timestamps[0].strftime("%Y-%m-%d %H:%M:%S") if common_timestamps else None,
+            "end_date": common_timestamps[-1].strftime("%Y-%m-%d %H:%M:%S") if common_timestamps else None,
+            "interpretation": self._interpret_correlation(correlation)
         }
 
-    def _classify_correlation(self, corr: float) -> str:
+    def _interpret_correlation(self, corr: float) -> str:
         """
-        Classify correlation strength.
+        Interpret correlation coefficient.
 
         Args:
             corr: Correlation coefficient (-1 to 1)
 
         Returns:
-            Classification string
+            String interpretation
         """
         abs_corr = abs(corr)
         if abs_corr >= 0.9:
@@ -189,168 +203,120 @@ class CorrelationCalculator:
         Returns:
             Diversification assessment
         """
-        if corr >= 0.8:
-            return "❌ Poor - High correlation, low diversification"
-        elif corr >= 0.5:
-            return "⚠️  Moderate - Some diversification benefit"
-        elif corr >= 0.2:
-            return "✅ Good - Decent diversification"
-        elif corr >= -0.2:
-            return "🌟 Excellent - High diversification"
+        if corr <= -0.5:
+            return "Excellent - Strong negative correlation provides excellent diversification"
+        elif corr <= 0:
+            return "Good - Low or negative correlation provides good diversification"
+        elif corr <= 0.3:
+            return "Moderate - Some diversification benefit"
+        elif corr <= 0.6:
+            return "Limited - High correlation reduces diversification benefit"
         else:
-            return "🚀 Outstanding - Negative correlation, ideal hedge"
+            return "Poor - Very high correlation provides little diversification"
 
-    def calculate_correlation_matrix(self, coin_ids: List[str], days: int = 30) -> Dict:
+    def calculate_correlation_matrix(self, coin_ids: List[str] = None,
+                                      start_date: str = None,
+                                      end_date: str = None) -> Dict:
         """
-        Calculate full correlation matrix for multiple cryptocurrencies.
+        Calculate full correlation matrix for a list of cryptocurrencies.
 
         Args:
-            coin_ids: List of cryptocurrency identifiers
-            days: Analysis period
+            coin_ids: List of cryptocurrency identifiers (optional)
+            start_date: Start date in 'YYYY-MM-DD' format (optional)
+            end_date: End date in 'YYYY-MM-DD' format (optional)
 
         Returns:
-            Correlation matrix and statistics
+            Dict with correlation matrix and portfolio metrics
         """
-        correlation_matrix = {}
-        correlations = []
+        if coin_ids is None:
+            coin_ids = self.get_available_coins()[:10]  # Limit to 10
 
-        # Calculate all pairwise correlations
+        if len(coin_ids) < 2:
+            return {"error": "Need at least 2 coins for correlation matrix"}
+
+        # Fetch all price data
+        all_prices = {}
+        for coin in coin_ids:
+            data = self.get_price_history(coin, start_date, end_date)
+            if data:
+                all_prices[coin] = {row["time_bucket"]: row["price_usd"] for row in data}
+
+        # Find common timestamps
+        all_timestamps = [set(prices.keys()) for prices in all_prices.values()]
+        common_timestamps = sorted(set.intersection(*all_timestamps)) if all_timestamps else []
+
+        if len(common_timestamps) < 10:
+            return {"error": "Not enough common data points across all coins"}
+
+        # Calculate pairwise correlations
+        matrix = {}
+        for i, coin1 in enumerate(coin_ids):
+            matrix[coin1] = {}
+            for j, coin2 in enumerate(coin_ids):
+                if coin1 == coin2:
+                    matrix[coin1][coin2] = 1.0
+                elif coin2 in matrix and coin1 in matrix[coin2]:
+                    matrix[coin1][coin2] = matrix[coin2][coin1]
+                else:
+                    prices1 = [all_prices[coin1][ts] for ts in common_timestamps]
+                    prices2 = [all_prices[coin2][ts] for ts in common_timestamps]
+
+                    returns1 = self.get_returns_series(prices1)
+                    returns2 = self.get_returns_series(prices2)
+
+                    n = len(returns1)
+                    if n < 2:
+                        matrix[coin1][coin2] = None
+                        continue
+
+                    mean1 = sum(returns1) / n
+                    mean2 = sum(returns2) / n
+
+                    numerator = sum((r1 - mean1) * (r2 - mean2) for r1, r2 in zip(returns1, returns2))
+                    denom1 = sum((r - mean1) ** 2 for r in returns1) ** 0.5
+                    denom2 = sum((r - mean2) ** 2 for r in returns2) ** 0.5
+
+                    if denom1 == 0 or denom2 == 0:
+                        matrix[coin1][coin2] = 0
+                    else:
+                        matrix[coin1][coin2] = round(numerator / (denom1 * denom2), 4)
+
+        # Calculate average correlation (diversification score)
+        all_corrs = []
         for i, coin1 in enumerate(coin_ids):
             for j, coin2 in enumerate(coin_ids):
-                if i < j:  # Only calculate unique pairs
-                    result = self.calculate_correlation(coin1, coin2, days)
-                    if result:
-                        corr_value = result["correlation"]
-                        # Store as tuple key for API
-                        correlation_matrix[(coin1, coin2)] = corr_value
-                        correlations.append(result)
+                if i < j and matrix[coin1].get(coin2) is not None:
+                    all_corrs.append(matrix[coin1][coin2])
 
-        # Check if we have enough data
-        if not correlations:
-            return {
-                "error": f"No correlation data available for the given coins over {days} days"
-            }
-
-        # Calculate average correlation (excluding self-correlation)
-        valid_correlations = [
-            c["correlation"] for c in correlations if c["correlation"] is not None
-        ]
-
-        avg_correlation = (
-            sum(valid_correlations) / len(valid_correlations)
-            if valid_correlations
-            else 0
-        )
-
-        # Calculate diversification score (as float)
-        diversification_score_info = self._calculate_diversification_score(
-            avg_correlation
-        )
-        diversification_score = diversification_score_info["score"]
+        avg_correlation = sum(all_corrs) / len(all_corrs) if all_corrs else 0
 
         return {
-            "correlation_matrix": correlation_matrix,
-            "period_days": days,
-            "diversification_score": diversification_score,
+            "correlation_matrix": matrix,
+            "avg_correlation": round(avg_correlation, 4),
+            "diversification_score": round(1 - avg_correlation, 4),
+            "coins_analyzed": coin_ids,
+            "common_data_points": len(common_timestamps),
+            "start_date": common_timestamps[0].strftime("%Y-%m-%d %H:%M:%S") if common_timestamps else None,
+            "end_date": common_timestamps[-1].strftime("%Y-%m-%d %H:%M:%S") if common_timestamps else None,
         }
-
-    def _calculate_diversification_score(self, avg_corr: float) -> Dict:
-        """
-        Calculate portfolio diversification score.
-
-        Args:
-            avg_corr: Average correlation across portfolio
-
-        Returns:
-            Diversification score and rating
-        """
-        # Diversification score: 0 (poor) to 100 (excellent)
-        # Lower correlation = better diversification
-        score = max(0, min(100, (1 - avg_corr) * 100))
-
-        if score >= 80:
-            rating = "🌟 Excellent"
-        elif score >= 60:
-            rating = "✅ Good"
-        elif score >= 40:
-            rating = "⚠️  Moderate"
-        else:
-            rating = "❌ Poor"
-
-        return {
-            "score": score,
-            "rating": rating,
-            "interpretation": f"Portfolio has {rating.split()[1].lower()} diversification",
-        }
-
-    def find_best_diversification_pairs(
-        self, coin_ids: List[str], days: int = 30, top_n: int = 3
-    ) -> List[Dict]:
-        """
-        Find the best crypto pairs for diversification.
-
-        Args:
-            coin_ids: List of cryptocurrencies
-            days: Analysis period
-            top_n: Number of top pairs to return
-
-        Returns:
-            Best pairs sorted by diversification benefit
-        """
-        correlations = []
-
-        for i, coin1 in enumerate(coin_ids):
-            for j, coin2 in enumerate(coin_ids):
-                if i < j:  # Avoid duplicates
-                    result = self.calculate_correlation(coin1, coin2, days)
-                    if result:
-                        correlations.append(result)
-
-        # Sort by correlation (lowest = best diversification)
-        correlations.sort(key=lambda x: abs(x["correlation"]))
-
-        return correlations[:top_n]
-
-    def find_worst_diversification_pairs(
-        self, coin_ids: List[str], days: int = 30, top_n: int = 3
-    ) -> List[Dict]:
-        """
-        Find crypto pairs with highest correlation (worst diversification).
-
-        Args:
-            coin_ids: List of cryptocurrencies
-            days: Analysis period
-            top_n: Number of pairs to return
-
-        Returns:
-            Worst pairs sorted by correlation
-        """
-        correlations = []
-
-        for i, coin1 in enumerate(coin_ids):
-            for j, coin2 in enumerate(coin_ids):
-                if i < j:
-                    result = self.calculate_correlation(coin1, coin2, days)
-                    if result:
-                        correlations.append(result)
-
-        # Sort by correlation (highest = worst diversification)
-        correlations.sort(key=lambda x: abs(x["correlation"]), reverse=True)
-
-        return correlations[:top_n]
 
     def get_available_coins(self) -> List[str]:
-        """Get list of available cryptocurrencies."""
+        """
+        Get list of available cryptocurrencies from crypto_prices_series.
+
+        Returns:
+            List of coin identifiers
+        """
         self.connect()
         cursor = self.conn.cursor()
 
         cursor.execute(
             """
             SELECT DISTINCT coin_id
-            FROM crypto_prices
+            FROM crypto_prices_series
             WHERE price_usd IS NOT NULL
             ORDER BY coin_id;
-        """
+            """
         )
 
         coins = [row["coin_id"] for row in cursor.fetchall()]
