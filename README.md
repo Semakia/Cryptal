@@ -14,7 +14,7 @@
 
 ## 📌 Overview
 
-**t-data-901-crypto_viz** is a full-stack platform that ingests, processes, and visualizes real-time cryptocurrency price data. It follows a modern **extract → load → transform** pipeline architecture with Kafka as the messaging backbone.
+**Cryptal** is a full-stack platform that ingests, processes, and visualizes real-time cryptocurrency price data. It follows a modern **extract → load → transform** pipeline architecture with Kafka as the messaging backbone.
 
 ### Key Components
 - **CoinGecko API** → market data source
@@ -35,34 +35,34 @@
                         └────────────────┬────────────────────┘
                                          │ (polling)
                                          ▼
-┌─────────────────────────────────────────────────────────────────┐
-│ EXTRACT LAYER │
-│ src/pipelines/extract/ → Kafka Producer │
-│ (CoinGecko → Kafka topic: crypto_prices_raw) │
-└───────────────────────────────┬─────────────────────────────────┘
-│
-▼
-┌─────────────────────────────────────────────────────────────────┐
-│ LOAD LAYER │
-│ src/pipelines/load/ → Kafka Consumer → PostgreSQL Neon │
-│ (Kafka → crypto_prices table) │
-└───────────────────────────────┬─────────────────────────────────┘
-│
-▼
-┌─────────────────────────────────────────────────────────────────┐
-│ TRANSFORM LAYER │
-│ src/pipelines/transform/ → Apache Spark │
-│ - crypto_price_series (Silver) │
-│ - crypto_price_series_indicators (Gold) │
-│ - crypto_correlation_matrix (Gold) │
-└───────────────────────────────┬─────────────────────────────────┘
-│
-▼
-┌─────────────────────────────────────────────────────────────────┐
-│ PRESENTATION LAYER │
-│ src/api/ → FastAPI REST API │
-│ crypto-dashboard/ → Next.js Frontend │
-└─────────────────────────────────────────────────────────────────┘
+               ┌─────────────────────────────────────────────────────────────────┐
+               │ EXTRACT LAYER │
+               │ src/pipelines/extract/ → Kafka Producer │
+               │ (CoinGecko → Kafka topic: crypto_prices_raw) │
+               └───────────────────────────────┬─────────────────────────────────┘
+               │
+               ▼
+               ┌─────────────────────────────────────────────────────────────────┐
+               │ LOAD LAYER │
+               │ src/pipelines/load/ → Kafka Consumer → PostgreSQL Neon │
+               │ (Kafka → crypto_prices table) │
+               └───────────────────────────────┬─────────────────────────────────┘
+               │
+               ▼
+               ┌─────────────────────────────────────────────────────────────────┐
+               │ TRANSFORM LAYER │
+               │ src/pipelines/transform/ → Apache Spark │
+               │ - crypto_price_series (Silver) │
+               │ - crypto_price_series_indicators (Gold) │
+               │ - crypto_correlation_matrix (Gold) │
+               └───────────────────────────────┬─────────────────────────────────┘
+               │
+               ▼
+               ┌─────────────────────────────────────────────────────────────────┐
+               │ PRESENTATION LAYER │
+               │ src/api/ → FastAPI REST API │
+               │ crypto-dashboard/ → Next.js Frontend │
+               └─────────────────────────────────────────────────────────────────┘
 
 
 
@@ -70,22 +70,22 @@
 
 ## 📦 Data Flow
 
-CoinGecko API
-↓ (polling every X seconds)
-[EXTRACT] Kafka Producer (PySpark)
-↓
-Kafka Broker → topic: crypto_prices_raw
-↓
-[LOAD] Kafka Consumer (FastAPI service)
-↓
-PostgreSQL Neon (table: crypto_prices)
-↓
-[TRANSFORM] Spark Job (periodic)
-├─→ crypto_price_series (Silver)
-├─→ crypto_price_series_indicators (Gold)
-└─→ crypto_correlation_matrix (Gold)
-↓
-[API] FastAPI → [FRONTEND] Next.js Dashboard
+     CoinGecko API
+     ↓ (polling every X seconds)
+     [EXTRACT] Kafka Producer (PySpark)
+     ↓
+     Kafka Broker → topic: crypto_prices_raw
+     ↓
+     [LOAD] Kafka Consumer (FastAPI service)
+     ↓
+     PostgreSQL Neon (table: crypto_prices)
+     ↓
+     [TRANSFORM] Spark Job (periodic)
+     ├─→ crypto_price_series (Silver)
+     ├─→ crypto_price_series_indicators (Gold)
+     └─→ crypto_correlation_matrix (Gold)
+     ↓
+     [API] FastAPI → [FRONTEND] Next.js Dashboard
 
 
 ---
@@ -106,56 +106,103 @@ PostgreSQL Neon (table: crypto_prices)
 
 ## 📁 Project Structure
 
-t-data-901-crypto_viz/
-├── src/
-│ ├── api/ # FastAPI backend
-│ │ ├── main.py # Application entry point
-│ │ ├── routes/
-│ │ │ ├── prices.py # GET /api/prices
-│ │ │ ├── indicators.py # GET /api/indicators
-│ │ │ └── correlation.py # GET /api/correlation
-│ │ ├── services/
-│ │ │ ├── kafka_consumer.py # Kafka → PostgreSQL
-│ │ │ ├── coingecko.py # CoinGecko API client
-│ │ │ └── database.py # PostgreSQL Neon connection
-│ │ └── models/
-│ │ └── schemas.py # Pydantic data models
-│ │
-│ ├── pipelines/
-│ │ ├── extract/ # Kafka producer
-│ │ │ └── coingecko_producer.py
-│ │ │
-│ │ ├── load/ # Kafka consumer
-│ │ │ └── postgres_loader.py
-│ │ │
-│ │ └── transform/ # Analytics modules (Spark)
-│ │ ├── transform.py # Main orchestration script
-│ │ └── utils/
-│ │ ├── data_transformer.py # SMA, RSI, volatility
-│ │ └── database_reader.py # JDBC read/write
-│ │
-│ └── .env # Environment configuration
-│
-├── crypto-dashboard/ # Next.js frontend
-│ ├── src/
-│ │ ├── app/ # App Router pages
-│ │ ├── components/
-│ │ │ ├── PriceChart.tsx
-│ │ │ ├── IndicatorPanel.tsx
-│ │ │ └── CorrelationMatrix.tsx
-│ │ ├── hooks/ # Custom React hooks
-│ │ └── lib/ # API clients & utilities
-│ └── package.json
-│
-├── .config/
-│ └── iac/
-│ └── dev/ # Docker Compose files
-│ ├── docker-compose.yml
-│ └── docker-compose.kafka.yml
-│
-├── start_docker.sh # Main launch script
-├── README.md
-└── LICENSE
+     t-data-901-crypto_viz/
+     │
+     ├── .config/
+     │   └── iac/
+     │       └── dev/                      # Docker Compose (dev)
+     │           ├── docker-compose.yml
+     │           ├── kafka/
+     │           ├── pgadmin/
+     │           ├── postgres/
+     │           └── spark/
+     │
+     ├── crypto-dashboard/                 # Next.js Frontend
+     │   ├── app/                          # Pages: dashboard, analytics, correlation, simulator
+     │   ├── components/                   # shadcn/ui, Recharts charts
+     │   ├── hooks/                        # use-crypto-data, use-toast
+     │   ├── lib/                          # API client, store, utils
+     │   ├── public/
+     │   ├── styles/
+     │   ├── .env.example
+     │   ├── Dockerfile
+     │   ├── next.config.mjs
+     │   ├── package.json (pnpm)
+     │   └── README.md
+     │
+     ├── docs/
+     │   └── t_dat_901_crypto_viz (1).pdf  # Documentation projet Epitech
+     │
+     ├── scripts/                          # Scripts utilitaires
+     │   ├── clean_old_cryptos.py
+     │   ├── diagnose_drawdown.sh
+     │   ├── seed_historical_data.py
+     │   ├── seed_historical_data_v2.py
+     │   ├── seed_historical_data_v3.py
+     │   ├── start_api.sh
+     │   ├── start_full_stack.sh
+     │   ├── test_api.py
+     │   ├── test_correlation.py
+     │   ├── test_drawdown.py
+     │   ├── test_fixed_metrics.sh
+     │   ├── test_neon_data.py
+     │   ├── test_pnl_simulator.py
+     │   ├── test_sharpe.py
+     │   ├── test_volatility.py
+     │   └── verify_metrics_corrections.sh
+     │
+     ├── src/
+     │   ├── .env.example                  # Variables d'environnement
+     │   │
+     │   ├── api/                          # FastAPI Backend
+     │   │   ├── __init__.py
+     │   │   ├── __main__.py
+     │   │   ├── main.py
+     │   │   ├── database.py               # Connexion Neon PostgreSQL
+     │   │   ├── models.py                 # Pydantic schemas
+     │   │   ├── requirements.txt
+     │   │   ├── Dockerfile
+     │   │   └── routers/
+     │   │       ├── __init__.py
+     │   │       ├── data.py               # GET /api/data/*
+     │   │       ├── health.py             # GET /api/health
+     │   │       ├── metrics.py            # GET /api/metrics/*
+     │   │       └── simulation.py         # POST /api/simulate/*
+     │   │
+     │   ├── pipelines/                    # ETL Kafka → Spark
+     │   │   │
+     │   │   ├── extract/                  # Kafka Producer (CoinGecko → Kafka)
+     │   │   │   ├── extract.py
+     │   │   │   └── utils/
+     │   │   │       └── extract_producer.py
+     │   │   │
+     │   │   ├── load/                     # Kafka Consumer (Kafka → PostgreSQL)
+     │   │   │   ├── load.py
+     │   │   │   └── utils/
+     │   │   │       └── data_consumer.py
+     │   │   │
+     │   │   └── transform/                # Analytics (Spark)
+     │   │       ├── transform.py
+     │   │       ├── correlation_calculator.py
+     │   │       ├── drawdown_calculator.py
+     │   │       ├── portfolio_simulator.py
+     │   │       ├── sharpe_calculator.py
+     │   │       ├── volatility_calculator.py
+     │   │       └── utils/
+     │   │           ├── data_transformer.py
+     │   │           └── database_reader.py
+     │   │
+     │   ├── test/
+     │   │   └── test.py
+     │   │
+     │   └── utils/
+     │       └── utils.py
+     │
+     ├── .gitignore
+     ├── .gitlab-ci.yml
+     ├── README.md
+     ├── start_docker.sh
+     └── LICENSE
 
 ---
 
@@ -187,21 +234,22 @@ COINGECKO_API_URL=https://api.coingecko.com/api/v3
 
 # Spark
 SPARK_HOME=/opt/spark
+```
 
 ### 3. Start all services
-bash
+```bash
 chmod +x start_docker.sh
 ./start_docker.sh
+```
 
 This script will:
 
-  - Start Kafka and Zookeeper (Docker Compose)
+Start Kafka and Zookeeper (Docker Compose)
 
-  - Start PostgreSQL (local or connect to Neon)
+Start PostgreSQL (local or connect to Neon)
 
-  - Launch the FastAPI backend
-
-  - Launch the Spark cluster (optional)
+Launch the FastAPI backend
+Launch the Spark cluster (optional)
 
 ### 4. Start the frontend
 cd crypto-dashboard
