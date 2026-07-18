@@ -12,11 +12,13 @@ spark_session = (
 database_reader = CryptoDatabaseReader(spark_session)
 data_transformer = CryptoDataTransformer(spark_session)
 
-SRC_DB_NAME = os.getenv("BRONZE_DB_NAME")
-SRC_DB_PORT = os.getenv("BRONZE_DB_PORT")
-SRC_DB_HOST = os.getenv("BRONZE_DB_HOST")
-SRC_DB_USER = os.getenv("BRONZE_DB_USER")
-SRC_DB_PASSWORD = os.getenv("BRONZE_DB_PASSWORD")
+# Source ET destination sont dans Silver : crypto_prices_series (construite
+# par build_price_series) est enrichie en indicateurs puis réécrite dans Silver.
+SRC_DB_NAME = os.getenv("SILVER_DB_NAME")
+SRC_DB_PORT = os.getenv("SILVER_DB_PORT")
+SRC_DB_HOST = os.getenv("SILVER_DB_HOST")
+SRC_DB_USER = os.getenv("SILVER_DB_USER")
+SRC_DB_PASSWORD = os.getenv("SILVER_DB_PASSWORD")
 
 DEST_DB_NAME = os.getenv("SILVER_DB_NAME")
 DEST_DB_USER = os.getenv("SILVER_DB_USER")

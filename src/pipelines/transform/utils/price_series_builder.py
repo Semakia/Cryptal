@@ -68,7 +68,7 @@ def main():
         dataframe_series.write
         .format("jdbc")
         .option("url", silver_url)
-        .option("dbtable", "public.crypto_price_series")
+        .option("dbtable", "public.crypto_prices_series")
         .option("user", silver_properties["user"])
         .option("password", silver_properties["password"])
         .option("driver", "org.postgresql.Driver")
@@ -76,7 +76,7 @@ def main():
         .save()
     )
 
-    print(f"""crypto_price_series rebuilt: {dataframe_series.count()}
+    print(f"""crypto_prices_series rebuilt: {dataframe_series.count()}
            rows written.""")
     spark.stop()
 

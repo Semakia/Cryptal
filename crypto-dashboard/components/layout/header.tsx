@@ -46,11 +46,7 @@ export function Header() {
                   <TrendingUp className="w-5 h-5 text-white" />
                 </div>
                 <span className="font-semibold text-lg text-sidebar-foreground">
-<<<<<<< HEAD
-                  Crypto Viz
-=======
                   CrypTal
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
                 </span>
               </div>
               <nav className="p-3 space-y-1">
@@ -79,11 +75,7 @@ export function Header() {
             <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent">
               <TrendingUp className="w-5 h-5 text-white" />
             </div>
-<<<<<<< HEAD
-            <span className="font-semibold text-lg">Crypto Viz</span>
-=======
             <span className="font-semibold text-lg">CrypTal</span>
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
           </div>
         </div>
 

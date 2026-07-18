@@ -44,7 +44,7 @@ class CorrelationCalculator:
             )
 
     def get_price_history(self, coin_id: str, start_date: str = None,
-                          end_date: str = None) -> List[Dict]:
+                          end_date: str = None, days: int = None) -> List[Dict]:
         """
         Fetch hourly price history for a cryptocurrency from
          crypto_prices_series.
@@ -53,6 +53,8 @@ class CorrelationCalculator:
             coin_id: Cryptocurrency identifier
             start_date: Start date in 'YYYY-MM-DD' format (optional)
             end_date: End date in 'YYYY-MM-DD' format (optional)
+            days: Lookback window in days (optional). Takes precedence over
+                  start_date when provided.
 
         Returns:
             List of dicts with price history data
@@ -63,7 +65,10 @@ class CorrelationCalculator:
         conditions = ["coin_id = %s"]
         params = [coin_id]
 
-        if start_date:
+        if days is not None:
+            conditions.append("time_bucket >= NOW() - INTERVAL '1 day' * %s")
+            params.append(days)
+        elif start_date:
             conditions.append("time_bucket >= %s")
             params.append(start_date)
         if end_date:
@@ -214,19 +219,37 @@ class CorrelationCalculator:
         else:
             return "Poor - Very high correlation provides little diversification"
 
+    @staticmethod
+    def _pearson(returns1: List[float], returns2: List[float]) -> float:
+        """Pearson correlation between two equal-length return series."""
+        n = min(len(returns1), len(returns2))
+        if n < 2:
+            return 0.0
+        r1, r2 = returns1[:n], returns2[:n]
+        mean1 = sum(r1) / n
+        mean2 = sum(r2) / n
+        numerator = sum((a - mean1) * (b - mean2) for a, b in zip(r1, r2))
+        denom1 = sum((a - mean1) ** 2 for a in r1) ** 0.5
+        denom2 = sum((b - mean2) ** 2 for b in r2) ** 0.5
+        if denom1 == 0 or denom2 == 0:
+            return 0.0
+        return numerator / (denom1 * denom2)
+
     def calculate_correlation_matrix(self, coin_ids: List[str] = None,
-                                      start_date: str = None,
-                                      end_date: str = None) -> Dict:
+                                      days: int = 30) -> Dict:
         """
-        Calculate full correlation matrix for a list of cryptocurrencies.
+        Calculate the correlation matrix for a list of cryptocurrencies.
 
         Args:
             coin_ids: List of cryptocurrency identifiers (optional)
-            start_date: Start date in 'YYYY-MM-DD' format (optional)
-            end_date: End date in 'YYYY-MM-DD' format (optional)
+            days: Lookback window in days (default: 30)
 
         Returns:
-            Dict with correlation matrix and portfolio metrics
+            Dict consumed by the /metrics/correlation endpoint:
+            - period_days: lookback window
+            - correlation_matrix: flat dict keyed by (coin_1, coin_2) tuples
+              (unique unordered pairs) -> Pearson correlation
+            - diversification_score, avg_correlation, coins_analyzed, data_points
         """
         if coin_ids is None:
             coin_ids = self.get_available_coins()[:10]  # Limit to 10
@@ -234,70 +257,52 @@ class CorrelationCalculator:
         if len(coin_ids) < 2:
             return {"error": "Need at least 2 coins for correlation matrix"}
 
-        # Fetch all price data
+        # Fetch all price data over the lookback window
         all_prices = {}
         for coin in coin_ids:
-            data = self.get_price_history(coin, start_date, end_date)
+            data = self.get_price_history(coin, days=days)
             if data:
-                all_prices[coin] = {row["time_bucket"]: row["price_usd"] for row in data}
+                all_prices[coin] = {
+                    row["time_bucket"]: row["price_usd"] for row in data
+                }
 
-        # Find common timestamps
-        all_timestamps = [set(prices.keys()) for prices in all_prices.values()]
-        common_timestamps = sorted(set.intersection(*all_timestamps)) if all_timestamps else []
+        coins = [c for c in coin_ids if c in all_prices]
+        if len(coins) < 2:
+            return {"error": "Not enough coins with data for correlation matrix"}
 
+        # Align on common timestamps
+        common_timestamps = sorted(
+            set.intersection(*[set(all_prices[c].keys()) for c in coins])
+        )
         if len(common_timestamps) < 10:
             return {"error": "Not enough common data points across all coins"}
 
-        # Calculate pairwise correlations
-        matrix = {}
-        for i, coin1 in enumerate(coin_ids):
-            matrix[coin1] = {}
-            for j, coin2 in enumerate(coin_ids):
-                if coin1 == coin2:
-                    matrix[coin1][coin2] = 1.0
-                elif coin2 in matrix and coin1 in matrix[coin2]:
-                    matrix[coin1][coin2] = matrix[coin2][coin1]
-                else:
-                    prices1 = [all_prices[coin1][ts] for ts in common_timestamps]
-                    prices2 = [all_prices[coin2][ts] for ts in common_timestamps]
-
-                    returns1 = self.get_returns_series(prices1)
-                    returns2 = self.get_returns_series(prices2)
-
-                    n = len(returns1)
-                    if n < 2:
-                        matrix[coin1][coin2] = None
-                        continue
-
-                    mean1 = sum(returns1) / n
-                    mean2 = sum(returns2) / n
-
-                    numerator = sum((r1 - mean1) * (r2 - mean2) for r1, r2 in zip(returns1, returns2))
-                    denom1 = sum((r - mean1) ** 2 for r in returns1) ** 0.5
-                    denom2 = sum((r - mean2) ** 2 for r in returns2) ** 0.5
-
-                    if denom1 == 0 or denom2 == 0:
-                        matrix[coin1][coin2] = 0
-                    else:
-                        matrix[coin1][coin2] = round(numerator / (denom1 * denom2), 4)
-
-        # Calculate average correlation (diversification score)
+        # Pairwise correlations on unique unordered pairs
+        correlation_matrix = {}
         all_corrs = []
-        for i, coin1 in enumerate(coin_ids):
-            for j, coin2 in enumerate(coin_ids):
-                if i < j and matrix[coin1].get(coin2) is not None:
-                    all_corrs.append(matrix[coin1][coin2])
+        for i, coin1 in enumerate(coins):
+            for coin2 in coins[i + 1:]:
+                prices1 = [all_prices[coin1][ts] for ts in common_timestamps]
+                prices2 = [all_prices[coin2][ts] for ts in common_timestamps]
+                corr = round(
+                    self._pearson(
+                        self.get_returns_series(prices1),
+                        self.get_returns_series(prices2),
+                    ),
+                    4,
+                )
+                correlation_matrix[(coin1, coin2)] = corr
+                all_corrs.append(corr)
 
         avg_correlation = sum(all_corrs) / len(all_corrs) if all_corrs else 0
 
         return {
-            "correlation_matrix": matrix,
+            "period_days": days,
+            "correlation_matrix": correlation_matrix,
             "avg_correlation": round(avg_correlation, 4),
-            "diversification_score": round(1 - avg_correlation, 4),
-            "coins_analyzed": coin_ids,
-            "common_data_points": len(common_timestamps),
-            "start_date": common_timestamps[0].strftime("%Y-%m-%d %H:%M:%S") if common_timestamps else None,
-            "end_date": common_timestamps[-1].strftime("%Y-%m-%d %H:%M:%S") if common_timestamps else None,
+            "diversification_score": round((1 - avg_correlation) * 100, 2),
+            "coins_analyzed": coins,
+            "data_points": len(common_timestamps),
         }
 
     def get_available_coins(self) -> List[str]:

@@ -3,10 +3,7 @@ Metrics router for cryptocurrency analytics endpoints.
 Provides volatility, Sharpe ratio, drawdown, and correlation metrics.
 """
 
-<<<<<<< HEAD
-=======
 import logging
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
 import sys
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -14,11 +11,8 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-<<<<<<< HEAD
-=======
 logger = logging.getLogger(__name__)
 
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 
@@ -38,12 +32,9 @@ from pipelines.transform.volatility_calculator import VolatilityCalculator
 
 router = APIRouter(prefix="/metrics", tags=["Metrics"])
 
-<<<<<<< HEAD
-=======
 # Cryptocurrencies to exclude from all endpoints
 EXCLUDED_CRYPTOS = ["ripple", "tether"]
 
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
 
 @router.get("/volatility", response_model=List[VolatilityMetrics])
 async def get_volatility_all(
@@ -66,18 +57,12 @@ async def get_volatility_all(
     try:
         calculator = VolatilityCalculator(get_db_config())
 
-<<<<<<< HEAD
-        # Get all available coins
-        cursor = db.get_cursor()
-        cursor.execute("SELECT DISTINCT coin_id FROM crypto_prices ORDER BY coin_id")
-=======
         # Get all available coins (excluding unwanted ones)
         cursor = db.get_cursor()
         cursor.execute(
             "SELECT DISTINCT coin_id FROM crypto_prices WHERE coin_id NOT IN %s ORDER BY coin_id",
             (tuple(EXCLUDED_CRYPTOS),),
         )
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
         coins = [row["coin_id"] for row in cursor.fetchall()]
         cursor.close()
 
@@ -92,21 +77,8 @@ async def get_volatility_all(
                             period_days=metrics["period_days"],
                             data_points=metrics["data_points"],
                             mean_price=metrics["mean_price"],
-<<<<<<< HEAD
-                            std_dev=metrics["std_dev"],
-                            annualized_volatility=metrics["annualized_volatility"],
-                            variance=metrics["variance"],
-                            coefficient_of_variation=metrics[
-                                "coefficient_of_variation"
-                            ],
-                            var_95=metrics["var_95"],
-                            min_price=metrics["min_price"],
-                            max_price=metrics["max_price"],
-                            price_range=metrics["price_range"],
-=======
                             period_volatility=metrics["period_volatility"],
                             annualized_volatility=metrics["annualized_volatility"],
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
                         )
                     )
             except Exception:
@@ -162,19 +134,8 @@ async def get_volatility(
             period_days=metrics["period_days"],
             data_points=metrics["data_points"],
             mean_price=metrics["mean_price"],
-<<<<<<< HEAD
-            std_dev=metrics["std_dev"],
-            annualized_volatility=metrics["annualized_volatility"],
-            variance=metrics["variance"],
-            coefficient_of_variation=metrics["coefficient_of_variation"],
-            var_95=metrics["var_95"],
-            min_price=metrics["min_price"],
-            max_price=metrics["max_price"],
-            price_range=metrics["price_range"],
-=======
             period_volatility=metrics["period_volatility"],
             annualized_volatility=metrics["annualized_volatility"],
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
         )
 
     except HTTPException:
@@ -190,11 +151,7 @@ async def get_sharpe_all(
     db: DatabaseConnection = Depends(get_db),
 ):
     """
-<<<<<<< HEAD
-    Get Sharpe and Sortino ratios for all cryptocurrencies.
-=======
     Get Sharpe ratios for all cryptocurrencies.
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
 
     Parameters
     ----------
@@ -211,18 +168,12 @@ async def get_sharpe_all(
     try:
         calculator = SharpeCalculator(get_db_config())
 
-<<<<<<< HEAD
-        # Get all available coins
-        cursor = db.get_cursor()
-        cursor.execute("SELECT DISTINCT coin_id FROM crypto_prices ORDER BY coin_id")
-=======
         # Get all available coins (excluding unwanted ones)
         cursor = db.get_cursor()
         cursor.execute(
             "SELECT DISTINCT coin_id FROM crypto_prices WHERE coin_id NOT IN %s ORDER BY coin_id",
             (tuple(EXCLUDED_CRYPTOS),),
         )
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
         coins = [row["coin_id"] for row in cursor.fetchall()]
         cursor.close()
 
@@ -232,25 +183,6 @@ async def get_sharpe_all(
                 metrics = calculator.calculate_sharpe_ratio(
                     coin, period, risk_free_rate
                 )
-<<<<<<< HEAD
-                if "error" not in metrics and metrics["period_days"] >= 5:
-                    results.append(
-                        SharpeMetrics(
-                            coin_id=metrics["coin_id"],
-                            period_days=metrics["period_days"],
-                            data_points=metrics["data_points"],
-                            total_return=metrics["total_return"],
-                            annualized_return=metrics["annualized_return"],
-                            annualized_volatility=metrics["annualized_volatility"],
-                            sharpe_ratio=metrics["sharpe_ratio"],
-                            sortino_ratio=metrics["sortino_ratio"],
-                            start_price=metrics["start_price"],
-                            end_price=metrics["end_price"],
-                        )
-                    )
-            except Exception:
-                # Skip coins with insufficient data
-=======
                 if "error" in metrics:
                     logger.warning(
                         f"Sharpe calculation error for {coin}: {metrics.get('error')}"
@@ -282,7 +214,6 @@ async def get_sharpe_all(
             except Exception as e:
                 # Skip coins with insufficient data
                 logger.error(f"Sharpe calculation exception for {coin}: {str(e)}")
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
                 continue
 
         calculator.close()
@@ -308,11 +239,7 @@ async def get_sharpe(
     risk_free_rate: float = Query(0.02, ge=0, le=0.2, description="Risk-free rate"),
 ):
     """
-<<<<<<< HEAD
-    Get Sharpe and Sortino ratios for a specific cryptocurrency.
-=======
     Get Sharpe ratio for a specific cryptocurrency.
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
 
     Parameters
     ----------
@@ -350,10 +277,6 @@ async def get_sharpe(
             annualized_return=metrics["annualized_return"],
             annualized_volatility=metrics["annualized_volatility"],
             sharpe_ratio=metrics["sharpe_ratio"],
-<<<<<<< HEAD
-            sortino_ratio=metrics["sortino_ratio"],
-=======
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
             start_price=metrics["start_price"],
             end_price=metrics["end_price"],
         )
@@ -385,18 +308,12 @@ async def get_drawdown_all(
     try:
         calculator = DrawdownCalculator(get_db_config())
 
-<<<<<<< HEAD
-        # Get all available coins
-        cursor = db.get_cursor()
-        cursor.execute("SELECT DISTINCT coin_id FROM crypto_prices ORDER BY coin_id")
-=======
         # Get all available coins (excluding unwanted ones)
         cursor = db.get_cursor()
         cursor.execute(
             "SELECT DISTINCT coin_id FROM crypto_prices WHERE coin_id NOT IN %s ORDER BY coin_id",
             (tuple(EXCLUDED_CRYPTOS),),
         )
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
         coins = [row["coin_id"] for row in cursor.fetchall()]
         cursor.close()
 
@@ -412,21 +329,10 @@ async def get_drawdown_all(
                             data_points=metrics["data_points"],
                             max_drawdown_pct=metrics["max_drawdown_pct"],
                             max_drawdown_value=metrics["max_drawdown_value"],
-<<<<<<< HEAD
-                            current_drawdown_pct=metrics["current_drawdown_pct"],
-                            underwater_pct=metrics["underwater_pct"],
-                            peak_price=metrics["peak_price"],
-                            trough_price=metrics["trough_price"],
-                            current_price=metrics["current_price"],
-                            peak_date=metrics["peak_date"],
-                            trough_date=metrics["trough_date"],
-                            drawdown_periods=metrics.get("drawdown_periods", []),
-=======
                             peak_price=metrics["peak_price"],
                             trough_price=metrics["trough_price"],
                             peak_date=metrics["peak_date"],
                             trough_date=metrics["trough_date"],
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
                         )
                     )
             except Exception:
@@ -483,21 +389,10 @@ async def get_drawdown(
             data_points=metrics["data_points"],
             max_drawdown_pct=metrics["max_drawdown_pct"],
             max_drawdown_value=metrics["max_drawdown_value"],
-<<<<<<< HEAD
-            current_drawdown_pct=metrics["current_drawdown_pct"],
-            underwater_pct=metrics["underwater_pct"],
-            peak_price=metrics["peak_price"],
-            trough_price=metrics["trough_price"],
-            current_price=metrics["current_price"],
-            peak_date=metrics["peak_date"],
-            trough_date=metrics["trough_date"],
-            drawdown_periods=metrics.get("drawdown_periods", []),
-=======
             peak_price=metrics["peak_price"],
             trough_price=metrics["trough_price"],
             peak_date=metrics["peak_date"],
             trough_date=metrics["trough_date"],
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
         )
 
     except HTTPException:
@@ -526,11 +421,7 @@ async def get_correlation_matrix(
     try:
         calculator = CorrelationCalculator(get_db_config())
 
-<<<<<<< HEAD
-        # Get all available coins
-=======
         # Get all available coins (excluding unwanted ones)
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
         db_config = get_db_config()
         import psycopg2
 
@@ -543,14 +434,10 @@ async def get_correlation_matrix(
             sslmode="require",
         )
         cursor = conn.cursor()
-<<<<<<< HEAD
-        cursor.execute("SELECT DISTINCT coin_id FROM crypto_prices ORDER BY coin_id")
-=======
         cursor.execute(
             "SELECT DISTINCT coin_id FROM crypto_prices WHERE coin_id NOT IN %s ORDER BY coin_id",
             (tuple(EXCLUDED_CRYPTOS),),
         )
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
         coins = [row[0] for row in cursor.fetchall()]
         cursor.close()
         conn.close()
@@ -576,23 +463,9 @@ async def get_correlation_matrix(
                 )
             )
 
-<<<<<<< HEAD
-        # Find highest and lowest correlations
-        sorted_corrs = sorted(correlations, key=lambda x: x.correlation)
-        lowest = sorted_corrs[0]
-        highest = sorted_corrs[-1]
-
         return CorrelationMatrix(
             period_days=result["period_days"],
             correlations=correlations,
-            diversification_score=result["diversification_score"],
-            highest_correlation=highest,
-            lowest_correlation=lowest,
-=======
-        return CorrelationMatrix(
-            period_days=result["period_days"],
-            correlations=correlations,
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
         )
 
     except HTTPException:

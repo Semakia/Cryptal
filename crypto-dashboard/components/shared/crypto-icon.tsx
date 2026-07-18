@@ -1,25 +1,3 @@
-<<<<<<< HEAD
-import { CRYPTO_COLORS, CRYPTO_SYMBOLS } from "@/lib/utils"
-
-interface CryptoIconProps {
-  crypto: string
-  size?: "sm" | "md" | "lg"
-}
-
-const sizes = {
-  sm: "w-6 h-6 text-xs",
-  md: "w-8 h-8 text-sm",
-  lg: "w-12 h-12 text-base",
-}
-
-export function CryptoIcon({ crypto, size = "md" }: CryptoIconProps) {
-  const color = CRYPTO_COLORS[crypto] || "#888"
-  const symbol = CRYPTO_SYMBOLS[crypto] || crypto.slice(0, 3).toUpperCase()
-
-  return (
-    <div
-      className={`${sizes[size]} rounded-full flex items-center justify-center font-bold text-white`}
-=======
 import Image from "next/image";
 import { CRYPTO_COLORS, CRYPTO_SYMBOLS } from "@/lib/utils";
 
@@ -74,14 +52,9 @@ export function CryptoIcon({ crypto, size = "md" }: CryptoIconProps) {
   return (
     <div
       className={`${sizeConfig.className} rounded-full flex items-center justify-center font-bold text-white flex-shrink-0`}
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
       style={{ backgroundColor: color }}
     >
       {symbol.slice(0, 1)}
     </div>
-<<<<<<< HEAD
-  )
-=======
   );
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
 }

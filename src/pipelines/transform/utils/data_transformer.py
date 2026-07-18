@@ -15,7 +15,7 @@ class CryptoDataTransformer:
         granularity: str = "daily"
     ) -> "pyspark.sql.DataFrame":
         """
-        Calcule la volatilité (stddev) sur crypto_price_series.
+        Calcule la volatilité (stddev) sur crypto_prices_series.
         granularity: "daily" → fenêtre de 24h, "hourly" → fenêtre de 1h
         Args:
             price_series_df: DataFrame avec colonnes coin_id, time_bucket, price_usd
@@ -44,7 +44,7 @@ class CryptoDataTransformer:
         window_size: int = 20
     ) -> "pyspark.sql.DataFrame":
         """
-        Calcule la SMA (Simple Moving Average) sur crypto_price_series.
+        Calcule la SMA (Simple Moving Average) sur crypto_prices_series.
         Args:
             price_series_df: DataFrame avec colonnes coin_id, time_bucket, price_usd
             window_size: nombre de buckets pour la moyenne (ex: 20 pour 20h)
@@ -67,7 +67,7 @@ class CryptoDataTransformer:
         window_size: int = 14
     ) -> "pyspark.sql.DataFrame":
         """
-        Calcule le RSI sur crypto_price_series.
+        Calcule le RSI sur crypto_prices_series.
         Args:
             price_series_df: DataFrame avec colonnes coin_id, time_bucket, price_usd
             window_size: nombre de buckets pour le calcul du RSI (ex: 14)
@@ -103,7 +103,7 @@ class CryptoDataTransformer:
         granularity: str = "daily"
     ) -> "pyspark.sql.DataFrame":
         """
-        Calcule la corrélation entre paires de cryptos sur crypto_price_series.
+        Calcule la corrélation entre paires de cryptos sur crypto_prices_series.
         Args:
             price_series_df: DataFrame avec colonnes coin_id, time_bucket, price_usd
             granularity: granularité des données ("daily" ou "hourly")

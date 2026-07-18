@@ -30,18 +30,14 @@ export function formatCompactCurrency(value: number): string {
   return formatCurrency(value);
 }
 
-<<<<<<< HEAD
-export function formatPercent(value: number, decimals = 2): string {
-=======
 export function formatPercent(
   value: number | undefined,
-  decimals = 2
+  decimals = 2,
 ): string {
   if (typeof value !== "number" || Number.isNaN(value)) {
     return "—";
   }
 
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
   return `${value >= 0 ? "+" : ""}${value.toFixed(decimals)}%`;
 }
 
@@ -52,26 +48,17 @@ export function formatNumber(value: number, decimals = 2): string {
   }).format(value);
 }
 
-<<<<<<< HEAD
-export function formatDate(date: string | Date): string {
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(new Date(date));
-=======
 export function formatDate(date?: string | Date | null): string {
   if (!date) return "—";
 
   const d = new Date(date);
   if (isNaN(d.getTime())) return "—";
 
-  return new Intl.DateTimeFormat("fr-FR", {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
     day: "numeric",
-    month: "long",
     year: "numeric",
   }).format(d);
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
 }
 
 export function formatDateForPeriod(
