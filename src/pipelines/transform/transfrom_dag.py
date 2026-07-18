@@ -27,11 +27,11 @@ with DAG(
     start = EmptyOperator(task_id="start")
     end = EmptyOperator(task_id="end")
 
-    # ── ÉTAPE 1 : Construire crypto_price_series (bronze → silver)
+    # ── ÉTAPE 1 : Construire crypto_prices_series (bronze → silver)
     build_price_series = SparkSubmitOperator(
         task_id="build_price_series",
         conn_id="spark_default",
-        application=f"{SCRIPTS_PATH}/pipelines/transform/build_price_series.py",
+        application=f"{SCRIPTS_PATH}/pipelines/transform/utils/price_series_builder.py",
         packages="org.postgresql:postgresql:42.6.0",
         conf={
             "spark.master": SPARK_MASTER,
@@ -39,13 +39,16 @@ with DAG(
             "spark.driver.memory": "512m",
         },
         env_vars={
-            "BRONZE_DB_HOST": "dev-bronze",
+            "BRONZE_DB_HOST": "91.134.132.149",
             "BRONZE_DB_PORT": "5432",
-            "BRONZE_DB_NAME": "bronze_db",
+            "BRONZE_DB_NAME": "crypto_viz_bronze",
             "BRONZE_DB_USER": "cryptoviz",
             "BRONZE_DB_PASSWORD": "{{ var.value.bronze_db_password }}",
-            "SILVER_DB_HOST": "dev-silver",
+            "SILVER_DB_HOST": "91.134.132.149",
+            "SILVER_DB_PORT": "5432",
             "SILVER_DB_NAME": "crypto_viz_silver",
+            "SILVER_DB_USER": "cryptoviz",
+            "SILVER_DB_PASSWORD": "{{ var.value.silver_db_password }}",
         },
     )
 
@@ -60,47 +63,23 @@ with DAG(
             "spark.executor.memory": "1g",
         },
         env_vars={
-            "SILVER_DB_HOST": "dev-silver",
+            "SILVER_DB_HOST": "91.134.132.149",
+            "SILVER_DB_PORT": "5432",
             "SILVER_DB_NAME": "crypto_viz_silver",
             "SILVER_DB_USER": "cryptoviz",
             "SILVER_DB_PASSWORD": "{{ var.value.silver_db_password }}",
         },
     )
 
-    # ── ÉTAPE 2b : Calcul volatilité (silver → gold)
-    run_volatility = SparkSubmitOperator(
-        task_id="run_volatility",
-        conn_id="spark_default",
-        application=f"{SCRIPTS_PATH}/pipelines/analytics/volatility.py",
-        packages="org.postgresql:postgresql:42.6.0",
-        conf={"spark.master": SPARK_MASTER},
-        env_vars={
-            "SILVER_DB_HOST": "dev-silver",
-            "SILVER_DB_NAME": "crypto_viz_silver",
-            "SILVER_DB_USER": "cryptoviz",
-            "SILVER_DB_PASSWORD": "{{ var.value.silver_db_password }}",
-        },
-    )
-
-    # ── ÉTAPE 2c : Calcul corrélations (silver → gold)
-    run_correlation = SparkSubmitOperator(
-        task_id="run_correlation",
-        conn_id="spark_default",
-        application=f"{SCRIPTS_PATH}/pipelines/analytics/correlation.py",
-        packages="org.postgresql:postgresql:42.6.0",
-        conf={"spark.master": SPARK_MASTER},
-        env_vars={
-            "SILVER_DB_HOST": "dev-silver",
-            "SILVER_DB_NAME": "crypto_viz_silver",
-            "SILVER_DB_USER": "cryptoviz",
-            "SILVER_DB_PASSWORD": "{{ var.value.silver_db_password }}",
-        },
-    )
+    # Note : la volatilité (stddev) et la matrice de corrélation sont déjà
+    # produites par run_transform (crypto_price_indicators +
+    # crypto_correlation_matrix). Les métriques fines par crypto sont calculées
+    # à la demande par l'API depuis crypto_prices_series.
 
     # ── Workflow
     (
         start
         >> build_price_series
-        >> [run_transform, run_volatility, run_correlation]  # parallèle
+        >> [run_transform]  # parallèle
         >> end
     )

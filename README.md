@@ -52,8 +52,8 @@
                ┌─────────────────────────────────────────────────────────────────┐
                │ TRANSFORM LAYER │
                │ src/pipelines/transform/ → Apache Spark │
-               │ - crypto_price_series (Silver) │
-               │ - crypto_price_series_indicators (Gold) │
+               │ - crypto_prices_series (Silver) │
+               │ - crypto_price_indicators (Gold) │
                │ - crypto_correlation_matrix (Gold) │
                └───────────────────────────────┬─────────────────────────────────┘
                │
@@ -81,8 +81,8 @@
      PostgreSQL Neon (table: crypto_prices)
      ↓
      [TRANSFORM] Spark Job (periodic)
-     ├─→ crypto_price_series (Silver)
-     ├─→ crypto_price_series_indicators (Gold)
+     ├─→ crypto_prices_series (Silver)
+     ├─→ crypto_price_indicators (Gold)
      └─→ crypto_correlation_matrix (Gold)
      ↓
      [API] FastAPI → [FRONTEND] Next.js Dashboard

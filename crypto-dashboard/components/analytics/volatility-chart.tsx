@@ -1,36 +1,3 @@
-<<<<<<< HEAD
-"use client"
-
-import { useVolatility } from "@/hooks/use-crypto-data"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { ChartSkeleton } from "@/components/shared/loading-skeleton"
-import { ErrorState } from "@/components/shared/error-state"
-import { formatNumber, formatCurrency, CRYPTO_NAMES } from "@/lib/utils"
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Cell } from "recharts"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-
-function getVolatilityColor(value: number, max: number): string {
-  const ratio = value / max
-  if (ratio < 0.33) return "#22c55e"
-  if (ratio < 0.66) return "#eab308"
-  return "#ef4444"
-}
-
-export function VolatilityChart() {
-  const { data, isLoading, error, refetch } = useVolatility()
-
-  if (isLoading) return <ChartSkeleton />
-  if (error) return <ErrorState message={error.message} onRetry={() => refetch()} />
-
-  const maxStdDev = Math.max(...(data?.metrics.map((m) => m.std_deviation) || [1]))
-  const chartData =
-    data?.metrics.map((m) => ({
-      name: CRYPTO_NAMES[m.crypto] || m.crypto,
-      crypto: m.crypto,
-      value: m.std_deviation,
-      color: getVolatilityColor(m.std_deviation, maxStdDev),
-    })) || []
-=======
 "use client";
 
 import { useVolatility } from "@/hooks/use-crypto-data";
@@ -93,43 +60,12 @@ export function VolatilityChart() {
     if (volatility < 90) return "#f97316"; // orange
     return "#ef4444"; // red
   };
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
 
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
           <CardTitle>Volatility Comparison</CardTitle>
-<<<<<<< HEAD
-          <CardDescription>Standard deviation of returns over the selected period</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="h-[250px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} layout="vertical">
-                <XAxis type="number" tickFormatter={(v) => formatNumber(v, 4)} fontSize={12} />
-                <YAxis type="category" dataKey="name" width={100} fontSize={12} />
-                <Tooltip
-                  content={({ active, payload }) => {
-                    if (!active || !payload?.length) return null
-                    const data = payload[0].payload
-                    return (
-                      <div className="bg-popover border border-border rounded-lg p-3 shadow-lg">
-                        <p className="font-medium">{data.name}</p>
-                        <p className="text-sm text-muted-foreground">Std Dev: {formatNumber(data.value, 6)}</p>
-                      </div>
-                    )
-                  }}
-                />
-                <Bar dataKey="value" radius={[0, 4, 4, 0]}>
-                  {chartData.map((entry, index) => (
-                    <Cell key={index} fill={entry.color} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-=======
           <CardDescription>
             Standard deviation of returns over the selected period
           </CardDescription>
@@ -173,53 +109,21 @@ export function VolatilityChart() {
               </Bar>
             </BarChart>
           </ResponsiveContainer>
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-<<<<<<< HEAD
-          <CardTitle>Volatility Metrics</CardTitle>
-=======
           <CardTitle>Volatility Analysis</CardTitle>
           <CardDescription>
             Annualized volatility measures how much an asset's price fluctuates.
             Higher volatility = higher risk.
           </CardDescription>
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-<<<<<<< HEAD
-                <TableHead>Crypto</TableHead>
-                <TableHead className="text-right">Std Deviation</TableHead>
-                <TableHead className="text-right">Coef. of Variation</TableHead>
-                <TableHead className="text-right">VaR 95%</TableHead>
-                <TableHead className="text-right">Price Range</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {data?.metrics.map((m) => (
-                <TableRow key={m.crypto}>
-                  <TableCell className="font-medium">{CRYPTO_NAMES[m.crypto] || m.crypto}</TableCell>
-                  <TableCell className="text-right font-mono">{formatNumber(m.std_deviation, 6)}</TableCell>
-                  <TableCell className="text-right font-mono">{formatNumber(m.coefficient_of_variation, 4)}</TableCell>
-                  <TableCell className="text-right font-mono">{formatCurrency(m.var_95)}</TableCell>
-                  <TableCell className="text-right text-sm">
-                    {formatCurrency(m.price_range.min)} - {formatCurrency(m.price_range.max)}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-    </div>
-  )
-=======
                 <TableHead>Cryptocurrency</TableHead>
                 <TableHead className="text-right">Average Price</TableHead>
                 <TableHead className="text-right">Period Volatility</TableHead>
@@ -311,5 +215,4 @@ export function VolatilityChart() {
       </Card>
     </div>
   );
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
 }

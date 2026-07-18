@@ -25,17 +25,10 @@ export function PnLSimulator() {
   })
   const [showComparison, setShowComparison] = useState(false)
   const [showBestEntry, setShowBestEntry] = useState(false)
-<<<<<<< HEAD
-
-  const { toast } = useToast()
-  const simulateMutation = useSimulatePnL()
-  const compareMutation = useComparePnL()
-=======
   const { toast } = useToast()
   const simulateMutation = useSimulatePnL()
   const compareMutation = useComparePnL()
   const compareItems = compareMutation.data
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
   const { data: bestEntryData, isLoading: bestEntryLoading } = useBestEntry(
     showBestEntry ? crypto : "",
     showBestEntry ? Number(amount) : 0,
@@ -72,11 +65,8 @@ export function PnLSimulator() {
   }
 
   const result = simulateMutation.data
-<<<<<<< HEAD
-=======
   const currentPrice = result?.sell_price ?? 0
-  
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
+
   const compareResult = compareMutation.data
 
   const maxDate = new Date().toISOString().split("T")[0]
@@ -190,39 +180,12 @@ export function PnLSimulator() {
                 <div className="space-y-4">
                   <div className="p-4 bg-success/10 border border-success/20 rounded-lg">
                     <p className="text-sm text-muted-foreground">Best Entry Date</p>
-<<<<<<< HEAD
-                    <p className="text-xl font-bold text-success">{formatDate(bestEntryData.best_entry.date)}</p>
-                    <p className="text-sm">Price: {formatCurrency(bestEntryData.best_entry.price)}</p>
-                    <p className="text-lg font-bold text-success mt-2">
-                      ROI: {formatPercent(bestEntryData.best_entry.roi_pct)}
-                    </p>
-                  </div>
-
-                  <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
-                    <p className="text-sm text-muted-foreground">Worst Entry Date</p>
-                    <p className="text-xl font-bold text-destructive">{formatDate(bestEntryData.worst_entry.date)}</p>
-                    <p className="text-sm">Price: {formatCurrency(bestEntryData.worst_entry.price)}</p>
-                    <p className="text-lg font-bold text-destructive mt-2">
-                      ROI: {formatPercent(bestEntryData.worst_entry.roi_pct)}
-                    </p>
-                  </div>
-=======
                     <p className="text-xl font-bold text-success">{formatDate(bestEntryData.best_entry_date)}</p>
                     <p className="text-sm">Price: {formatCurrency(bestEntryData.best_entry_price)}</p>
                     <p className="text-lg font-bold text-success mt-2">
                       ROI: {formatPercent(bestEntryData.pnl_percentage)}
                     </p>
                   </div>
-
-                  {/* <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
-                    <p className="text-sm text-muted-foreground">Worst Entry Date</p>
-                    <p className="text-xl font-bold text-destructive">{formatDate(bestEntryData.worst_entry_date)}</p>
-                    <p className="text-sm">Price: {formatCurrency(bestEntryData.worst_entry_cd.price)}</p>
-                    <p className="text-lg font-bold text-destructive mt-2">
-                      ROI: {formatPercent(bestEntryData.worst_entry.roi_pct)}
-                    </p>
-                  </div> */}
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground text-center py-4">
@@ -240,7 +203,7 @@ export function PnLSimulator() {
             <CardHeader>
               <CardTitle>Simulation Results</CardTitle>
               <CardDescription>
-                {CRYPTO_NAMES[result.crypto]} - {formatDate(result.purchase_date)}
+                {CRYPTO_NAMES[result.coin_id]} - {formatDate(result.purchase_date)}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -250,13 +213,8 @@ export function PnLSimulator() {
                   <p className="text-lg font-bold">{formatCurrency(result.purchase_price)}</p>
                 </div>
                 <div className="space-y-1">
-<<<<<<< HEAD
                   <p className="text-sm text-muted-foreground">Current Price</p>
-                  <p className="text-lg font-bold">{formatCurrency(result.current_price)}</p>
-=======
-                  <p className="text-sm text-muted-foreground">Current Prices</p>
                   <p className="text-lg font-bold">{formatCurrency(currentPrice)}</p>
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
                 </div>
                 <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">Quantity Bought</p>
@@ -292,23 +250,14 @@ export function PnLSimulator() {
               <div
                 className={cn(
                   "p-4 rounded-lg text-center",
-<<<<<<< HEAD
-                  result.roi_pct >= 0
-=======
                   result.roi >= 0
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
                     ? "bg-success/10 border border-success/20"
                     : "bg-destructive/10 border border-destructive/20",
                 )}
               >
                 <p className="text-sm text-muted-foreground mb-1">Return on Investment</p>
-<<<<<<< HEAD
-                <p className={cn("text-4xl font-bold", result.roi_pct >= 0 ? "text-success" : "text-destructive")}>
-                  {formatPercent(result.roi_pct)}
-=======
                 <p className={cn("text-4xl font-bold", result.roi >= 0 ? "text-success" : "text-destructive")}>
                   {formatPercent(result.roi)}
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
                 </p>
               </div>
             </CardContent>
@@ -320,13 +269,8 @@ export function PnLSimulator() {
             <CardHeader>
               <CardTitle>Comparison Results</CardTitle>
               <CardDescription>
-<<<<<<< HEAD
-                All cryptos ranked by ROI for {formatCurrency(compareResult.amount)} invested on{" "}
-                {formatDate(compareResult.purchase_date)}
-=======
                 ROI comparison for {formatCurrency(Number(amount))} invested on{" "}
                 {formatDate(purchaseDate)}
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -341,17 +285,12 @@ export function PnLSimulator() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-<<<<<<< HEAD
-                  {compareResult.comparisons
-                    .sort((a, b) => b.roi_pct - a.roi_pct)
+                  {[...compareItems]
+                    .sort((a, b) => b.roi - a.roi)
                     .map((c, i) => (
-                      <TableRow
-                        key={c.crypto}
-                        className="cursor-pointer hover:bg-muted/50"
-                        onClick={() => setCrypto(c.crypto)}
-                      >
+                      <TableRow key={c.coin_id}>
                         <TableCell>{i < 3 ? ["🥇", "🥈", "🥉"][i] : i + 1}</TableCell>
-                        <TableCell className="font-medium">{CRYPTO_NAMES[c.crypto]}</TableCell>
+                        <TableCell className="font-medium">{CRYPTO_NAMES[c.coin_id]}</TableCell>
                         <TableCell className="text-right font-mono">{formatCurrency(c.current_value)}</TableCell>
                         <TableCell
                           className={cn("text-right font-mono", c.pnl >= 0 ? "text-success" : "text-destructive")}
@@ -361,51 +300,14 @@ export function PnLSimulator() {
                         <TableCell
                           className={cn(
                             "text-right font-mono font-bold",
-                            c.roi_pct >= 0 ? "text-success" : "text-destructive",
+                            c.roi >= 0 ? "text-success" : "text-destructive",
                           )}
                         >
-                          {formatPercent(c.roi_pct)}
+                          {formatPercent(c.roi)}
                         </TableCell>
                       </TableRow>
                     ))}
                 </TableBody>
-=======
-  {[...compareItems]
-    .sort((a, b) => b.roi - a.roi)
-    .map((c, i) => (
-      <TableRow key={c.coin_id}>
-        <TableCell>{i + 1}</TableCell>
-
-        <TableCell className="font-medium">
-          {CRYPTO_NAMES[c.coin_id]}
-        </TableCell>
-
-        <TableCell className="text-right font-mono">
-          {formatCurrency(c.current_value)}
-        </TableCell>
-
-        <TableCell
-          className={cn(
-            "text-right font-mono",
-            c.pnl >= 0 ? "text-success" : "text-destructive",
-          )}
-        >
-          {formatCurrency(c.pnl)}
-        </TableCell>
-
-        <TableCell
-          className={cn(
-            "text-right font-mono font-bold",
-            c.roi >= 0 ? "text-success" : "text-destructive",
-          )}
-        >
-          {formatPercent(c.roi)}
-        </TableCell>
-      </TableRow>
-    ))}
-</TableBody>
-
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
               </Table>
             </CardContent>
           </Card>

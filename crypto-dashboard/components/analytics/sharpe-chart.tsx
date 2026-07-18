@@ -1,43 +1,3 @@
-<<<<<<< HEAD
-"use client"
-
-import { useState } from "react"
-import { useSharpe } from "@/hooks/use-crypto-data"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { ChartSkeleton } from "@/components/shared/loading-skeleton"
-import { ErrorState } from "@/components/shared/error-state"
-import { formatNumber, formatPercent, CRYPTO_NAMES } from "@/lib/utils"
-import { cn } from "@/lib/utils"
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Cell, ReferenceLine } from "recharts"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-
-function getSharpeColor(value: number): string {
-  if (value > 1) return "#22c55e"
-  if (value > 0) return "#eab308"
-  return "#ef4444"
-}
-
-const MEDALS = ["🥇", "🥈", "🥉"]
-
-export function SharpeChart() {
-  const [riskFreeRate, setRiskFreeRate] = useState(0.02)
-  const { data, isLoading, error, refetch } = useSharpe(riskFreeRate)
-
-  if (isLoading) return <ChartSkeleton />
-  if (error) return <ErrorState message={error.message} onRetry={() => refetch()} />
-
-  const sortedMetrics = [...(data?.metrics || [])].sort((a, b) => b.sharpe_ratio - a.sharpe_ratio)
-  const top3 = sortedMetrics.slice(0, 3)
-
-  const chartData = sortedMetrics.map((m) => ({
-    name: CRYPTO_NAMES[m.crypto] || m.crypto,
-    crypto: m.crypto,
-    value: m.sharpe_ratio,
-    color: getSharpeColor(m.sharpe_ratio),
-  }))
-=======
 "use client";
 
 import { useState } from "react";
@@ -100,7 +60,6 @@ export function SharpeChart() {
   );
 
   const bestCrypto = sortedMetrics[0];
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
 
   return (
     <div className="space-y-6">
@@ -114,39 +73,11 @@ export function SharpeChart() {
             type="number"
             step="0.01"
             min="0"
-<<<<<<< HEAD
-            max="1"
-=======
             max="0.2"
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
             value={riskFreeRate}
             onChange={(e) => setRiskFreeRate(Number(e.target.value))}
             className="w-24"
           />
-<<<<<<< HEAD
-        </div>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-3">
-        {top3.map((m, i) => (
-          <Card key={m.crypto} className="relative overflow-hidden">
-            <div className="absolute top-2 right-2 text-3xl">{MEDALS[i]}</div>
-            <CardContent className="pt-6">
-              <p className="text-sm text-muted-foreground">{CRYPTO_NAMES[m.crypto] || m.crypto}</p>
-              <p
-                className={cn(
-                  "text-3xl font-bold",
-                  m.sharpe_ratio > 1 ? "text-success" : m.sharpe_ratio > 0 ? "text-warning" : "text-destructive",
-                )}
-              >
-                {formatNumber(m.sharpe_ratio, 2)}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">Sharpe Ratio</p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-=======
           <span className="text-xs text-muted-foreground">
             ({formatPercent(riskFreeRate * 100, 1)})
           </span>
@@ -183,43 +114,10 @@ export function SharpeChart() {
           </CardContent>
         </Card>
       )}
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
 
       <Card>
         <CardHeader>
           <CardTitle>Sharpe Ratio Comparison</CardTitle>
-<<<<<<< HEAD
-          <CardDescription>Risk-adjusted returns (higher is better, above 1 is good)</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="h-[250px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} layout="vertical">
-                <XAxis type="number" tickFormatter={(v) => formatNumber(v, 2)} fontSize={12} />
-                <YAxis type="category" dataKey="name" width={100} fontSize={12} />
-                <Tooltip
-                  content={({ active, payload }) => {
-                    if (!active || !payload?.length) return null
-                    const data = payload[0].payload
-                    return (
-                      <div className="bg-popover border border-border rounded-lg p-3 shadow-lg">
-                        <p className="font-medium">{data.name}</p>
-                        <p className="text-sm text-muted-foreground">Sharpe: {formatNumber(data.value, 3)}</p>
-                      </div>
-                    )
-                  }}
-                />
-                <ReferenceLine x={0} stroke="currentColor" strokeOpacity={0.3} />
-                <ReferenceLine x={1} stroke="#22c55e" strokeDasharray="3 3" strokeOpacity={0.5} />
-                <Bar dataKey="value" radius={[0, 4, 4, 0]}>
-                  {chartData.map((entry, index) => (
-                    <Cell key={index} fill={entry.color} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-=======
           <CardDescription>
             Risk-adjusted returns (higher is better, above 1 is good)
           </CardDescription>
@@ -274,65 +172,21 @@ export function SharpeChart() {
               </Bar>
             </BarChart>
           </ResponsiveContainer>
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-<<<<<<< HEAD
-          <CardTitle>Risk-Adjusted Returns</CardTitle>
-=======
           <CardTitle>Risk-Adjusted Returns (Sharpe Ratio)</CardTitle>
           <CardDescription>
             Measures actual return per unit of risk over the selected period.
             Higher is better.
           </CardDescription>
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-<<<<<<< HEAD
-                <TableHead>Crypto</TableHead>
-                <TableHead className="text-right">Ann. Return</TableHead>
-                <TableHead className="text-right">Ann. Volatility</TableHead>
-                <TableHead className="text-right">Sharpe Ratio</TableHead>
-                <TableHead className="text-right">Sortino Ratio</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {sortedMetrics.map((m) => (
-                <TableRow key={m.crypto}>
-                  <TableCell className="font-medium">{CRYPTO_NAMES[m.crypto] || m.crypto}</TableCell>
-                  <TableCell
-                    className={cn(
-                      "text-right font-mono",
-                      m.annualized_return >= 0 ? "text-success" : "text-destructive",
-                    )}
-                  >
-                    {formatPercent(m.annualized_return * 100)}
-                  </TableCell>
-                  <TableCell className="text-right font-mono">{formatPercent(m.annualized_volatility * 100)}</TableCell>
-                  <TableCell
-                    className={cn(
-                      "text-right font-mono font-bold",
-                      m.sharpe_ratio > 1 ? "text-success" : m.sharpe_ratio > 0 ? "text-warning" : "text-destructive",
-                    )}
-                  >
-                    {formatNumber(m.sharpe_ratio, 2)}
-                  </TableCell>
-                  <TableCell className="text-right font-mono">{formatNumber(m.sortino_ratio, 2)}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-    </div>
-  )
-=======
                 <TableHead>Cryptocurrency</TableHead>
                 <TableHead className="text-right">
                   Actual Return (Period)
@@ -432,5 +286,4 @@ export function SharpeChart() {
       </Card>
     </div>
   );
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
 }
