@@ -62,7 +62,7 @@ x-airflow-common: &airflow-common
     AIRFLOW__CORE__PLUGINS_FOLDER: /opt/airflow/plugins
     AIRFLOW__CORE__BASE_LOG_FOLDER: /opt/airflow/logs
     AIRFLOW__CORE__EXCLUDED_PATTERNS: "tests/*,**/tests/*"
-    PYTHONPATH: /opt/airflow/domains:/opt/airflow/plugins
+    PYTHONPATH: /opt/spark/scripts:/opt/airflow/domains:/opt/airflow/plugins
     AIRFLOW_VAR_API_URL: ${AIRFLOW_VAR_API_URL}
     AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: "true"
     AIRFLOW_CONN_SPARK_DEFAULT: 'spark://spark-master:7077'
@@ -86,6 +86,9 @@ x-airflow-common: &airflow-common
     GOLD_DB_PASSWORD: ${POSTGRES_PASSWORD:-password}
   volumes:
     - ../../../src/pipelines:/opt/airflow/dags/pipelines
+    # Monte tout src/ à l'emplacement attendu par spark-submit (application path
+    # du DAG) : le driver s'exécute dans le worker Airflow en mode client.
+    - ../../../src:/opt/spark/scripts
     - ../metadata:/opt/airflow/dags/metadata
     - ../../../src/platform:/opt/airflow/dags/platform
     - ./dags/arome:/opt/airflow/dags/arome
@@ -98,7 +101,7 @@ x-airflow-common: &airflow-common
     postgres-airflow:
       condition: service_healthy
   networks:
-    - open-meteo-datawarehouse-network
+    - crypto-viz-datawarehouse-network
 
 services:
 
@@ -119,7 +122,7 @@ services:
       start_period: 5s
     restart: always
     networks:
-      - open-meteo-datawarehouse-network
+      - crypto-viz-datawarehouse-network
 
   redis:
     image: redis:7.2-bookworm
@@ -133,7 +136,7 @@ services:
       start_period: 30s
     restart: always
     networks:
-      - open-meteo-datawarehouse-network
+      - crypto-viz-datawarehouse-network
 
   airflow-webserver:
     <<: *airflow-common
@@ -311,3 +314,8 @@ services:
 volumes:
   postgres-airflow-volume:
     name: open-meteo-airflow-db
+
+networks:
+  crypto-viz-datawarehouse-network:
+    driver: bridge
+    name: crypto-viz-datawarehouse-network

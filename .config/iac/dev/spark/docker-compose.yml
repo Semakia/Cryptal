@@ -35,6 +35,8 @@ services:
       - ../../../../src/:/opt/spark/scripts
       - ./data:/opt/spark/data
       - ./ivy:/tmp/.ivy2
+    networks:
+      - crypto-viz-datawarehouse-network
 
   worker1:
     image: docker.io/bitnami/spark:3.5
@@ -52,8 +54,10 @@ services:
       - SPARK_USER=spark
       - SPARK_LOG_CONF=/opt/bitnami/spark/conf/log4j2.properties
     volumes:
-      - ./scripts:/opt/spark/scripts
+      - ../../../../src/:/opt/spark/scripts
       - ./data:/opt/spark/data
+    networks:
+      - crypto-viz-datawarehouse-network
     depends_on:
       - master
 
@@ -74,7 +78,14 @@ services:
       - HADOOP_USER_NAME=spark
       - SPARK_LOG_CONF=/opt/bitnami/spark/conf/log4j2.properties
     volumes:
-      - ./scripts:/opt/spark/scripts
+      - ../../../../src/:/opt/spark/scripts
       - ./data:/opt/spark/data
+    networks:
+      - crypto-viz-datawarehouse-network
     depends_on:
       - master
+
+networks:
+  crypto-viz-datawarehouse-network:
+    driver: bridge
+    name: crypto-viz-datawarehouse-network
