@@ -98,6 +98,68 @@ def get_db_config():
     }
 
 
+def get_silver_db_config():
+    """
+    Get the SILVER database configuration as a dictionary.
+
+    Les calculateurs (volatilité, sharpe, drawdown, corrélation, portfolio)
+    lisent la table crypto_prices_series qui vit dans la couche Silver,
+    produite par le DAG. À utiliser pour eux (pas get_db_config() = Bronze).
+
+    Returns
+    -------
+    dict
+        Silver database configuration dictionary.
+    """
+    return {
+        "host": os.getenv("SILVER_DB_HOST"),
+        "dbname": os.getenv("SILVER_DB_NAME"),
+        "user": os.getenv("SILVER_DB_USER"),
+        "password": os.getenv("SILVER_DB_PASSWORD"),
+        "port": os.getenv("SILVER_DB_PORT", "5432"),
+    }
+
+
+def get_gold_db_config():
+    """
+    Get the GOLD database configuration as a dictionary.
+
+    La couche Gold contient les métriques pré-calculées par le DAG
+    (gold_volatility, gold_sharpe, gold_drawdown, gold_correlation_matrix).
+    C'est la source de lecture des endpoints /metrics.
+
+    Returns
+    -------
+    dict
+        Gold database configuration dictionary.
+    """
+    return {
+        "host": os.getenv("GOLD_DB_HOST"),
+        "dbname": os.getenv("GOLD_DB_NAME"),
+        "user": os.getenv("GOLD_DB_USER"),
+        "password": os.getenv("GOLD_DB_PASSWORD"),
+        "port": os.getenv("GOLD_DB_PORT", "5432"),
+    }
+
+
+def _gold_cursor():
+    """
+    Ouvre une connexion à la base Gold et renvoie (connexion, curseur dict).
+    L'appelant est responsable de fermer la connexion.
+    """
+    cfg = get_gold_db_config()
+    conn = psycopg2.connect(
+        host=cfg["host"],
+        dbname=cfg["dbname"],
+        user=cfg["user"],
+        password=cfg["password"],
+        port=cfg["port"],
+        sslmode="require",
+        cursor_factory=RealDictCursor,
+    )
+    return conn, conn.cursor()
+
+
 # Global database instance
 db = DatabaseConnection()
 
