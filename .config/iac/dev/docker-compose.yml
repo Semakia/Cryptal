@@ -67,5 +67,3 @@ networks:
   crypto-viz-datawarehouse-network:
     driver: bridge
     name: crypto-viz-datawarehouse-network
-
-      - ../../../src/.env
