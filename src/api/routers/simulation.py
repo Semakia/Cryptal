@@ -13,6 +13,8 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Query
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 
+# PortfolioSimulator lit la table brute crypto_prices (Bronze, prix horodatés)
+# et n'a PAS été migré vers crypto_prices_series -> config Bronze (get_db_config).
 from database import DatabaseConnection, get_db, get_db_config
 from models import (
     BestEntryPointRequest,
