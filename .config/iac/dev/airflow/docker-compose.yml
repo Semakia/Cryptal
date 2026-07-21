@@ -47,7 +47,12 @@
 # kics-scan disable=Idc4d3b58a-e6d4-450f-9340-04f1e702eaae,ce76b7d0-9e77-464d-b86f-c5c48e03e22d,451d79dc-0588-476a-ad03-3c7f0320abb3,bc2908f3-f73c-40a9-8793-c1b7d5544f79,610e266e-6c12-4bca-9925-1ed0cd29742b,487f4be7-3fd9-4506-a07a-eae252180c08,698ed579-b239-4f8f-a388-baa4bcb13ef8,4a20ebac-1060-4c81-95d1-1f7f620e983b,48a5beba-e4c0-4584-a2aa-e6894e4cf424,8c978947-0ff6-485c-b0c2-0bfca6026466,c4d3b58a-e6d4-450f-9340-04f1e702eaae
 ---
 x-airflow-common: &airflow-common
-  build: .
+  # NB : via `include` dans le compose racine, les chemins relatifs de build
+  # sont résolus depuis le 1er fichier inclus (kafka/), pas depuis ce fichier.
+  # D'où `../airflow` (et non `.`) pour retomber sur ce dossier + son Dockerfile.
+  build:
+    context: ../airflow
+    dockerfile: Dockerfile
   env_file:
     - ../.env.dev
   environment: &airflow-common-env
@@ -65,9 +70,15 @@ x-airflow-common: &airflow-common
     PYTHONPATH: /opt/spark/scripts:/opt/airflow/domains:/opt/airflow/plugins
     AIRFLOW_VAR_API_URL: ${AIRFLOW_VAR_API_URL}
     AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: "true"
-    AIRFLOW_CONN_SPARK_DEFAULT: 'spark://spark-master:7077'
+    # Le host DOIT inclure le schéma `spark://` sinon SparkSubmitOperator génère
+    # `--master spark-master:7077` (sans schéma) -> "Could not parse Master URL".
+    # La forme URI `spark://spark-master:7077` donne host=spark-master (schéma
+    # perdu) ; on passe donc par la forme JSON avec host = spark://spark-master.
+    AIRFLOW_CONN_SPARK_DEFAULT: '{"conn_type": "spark", "host": "spark://spark-master", "port": 7077}'
     # Variable pour ajouter des requirements supplémentaires à l'installation au démarrage des conteneurs.
-    _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-airflow-providers-apache-spark}
+    # Provider Spark + pyspark sont installés dans l'image (voir Dockerfile).
+    # Défaut vide pour ne rien réinstaller (le nom précédent était erroné).
+    _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-}
     # Connexions aux bases de données
     BRONZE_DB_HOST: ${POSTGRES_DB_HOST:-91.134.132.149}
     BRONZE_DB_PORT: 5432
@@ -85,12 +96,15 @@ x-airflow-common: &airflow-common
     GOLD_DB_USER: ${POSTGRES_USER:-postgres}
     GOLD_DB_PASSWORD: ${POSTGRES_PASSWORD:-password}
   volumes:
-    - ../../../src/pipelines:/opt/airflow/dags/pipelines
+    # NB : via `include`, les chemins relatifs sont résolus depuis dev/ (1er
+    # dossier inclus), à même profondeur que dev/airflow -> il faut 4 niveaux
+    # `../` pour atteindre <repo>/src (et non 3, qui tombait sur .config/src).
+    - ../../../../src/pipelines:/opt/airflow/dags/pipelines
     # Monte tout src/ à l'emplacement attendu par spark-submit (application path
     # du DAG) : le driver s'exécute dans le worker Airflow en mode client.
-    - ../../../src:/opt/spark/scripts
+    - ../../../../src:/opt/spark/scripts
     - ../metadata:/opt/airflow/dags/metadata
-    - ../../../src/platform:/opt/airflow/dags/platform
+    - ../../../../src/platform:/opt/airflow/dags/platform
     - ./dags/arome:/opt/airflow/dags/arome
     - ./plugins/arome_fetcher:/opt/airflow/plugins/arome_fetcher
     - ./logs:/opt/airflow/logs
