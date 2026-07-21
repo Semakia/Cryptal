@@ -32,7 +32,7 @@ with DAG(
         task_id="build_price_series",
         conn_id="spark_default",
         application=f"{SCRIPTS_PATH}/pipelines/transform/utils/price_series_builder.py",
-        packages="org.postgresql:postgresql:42.6.0",
+        jars=f"{SCRIPTS_PATH}/jars/postgresql-42.6.0.jar",
         conf={
             "spark.master": SPARK_MASTER,
             "spark.executor.memory": "1g",
@@ -49,6 +49,9 @@ with DAG(
             "SILVER_DB_NAME": "crypto_viz_silver",
             "SILVER_DB_USER": "cryptoviz",
             "SILVER_DB_PASSWORD": "{{ var.value.silver_db_password }}",
+            # Fenêtre de lookback (jours). Grande valeur ici car la donnée
+            # bronze de démo date de nov-déc 2025. En prod : ramener à ~30.
+            "LOOKBACK_DAYS": "3650",
         },
     )
 
@@ -57,7 +60,7 @@ with DAG(
         task_id="run_transform",
         conn_id="spark_default",
         application=f"{SCRIPTS_PATH}/pipelines/transform/transform.py",
-        packages="org.postgresql:postgresql:42.6.0",
+        jars=f"{SCRIPTS_PATH}/jars/postgresql-42.6.0.jar",
         conf={
             "spark.master": SPARK_MASTER,
             "spark.executor.memory": "1g",

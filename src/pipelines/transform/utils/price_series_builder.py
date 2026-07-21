@@ -42,8 +42,10 @@ def main():
         .load()
     )
 
-    # Filtrer les données des 30 derniers jours et calculer les buckets horaires
-    cutoff = F.current_timestamp() - F.expr("INTERVAL 30 DAYS")
+    # Fenêtre de lookback paramétrable (défaut 30 jours). Permet de traiter de
+    # l'historique plus ancien sans modifier le code (ex. LOOKBACK_DAYS=3650).
+    lookback_days = int(os.getenv("LOOKBACK_DAYS", "30"))
+    cutoff = F.current_timestamp() - F.expr(f"INTERVAL {lookback_days} DAYS")
 
     dataframe_filtered = (
         dataframe_bronze
