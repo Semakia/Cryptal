@@ -42,6 +42,11 @@ class DrawdownCalculator:
                 sslmode="require",
             )
 
+    def close(self):
+        """Close database connection."""
+        if self.conn and not self.conn.closed:
+            self.conn.close()
+
     def get_price_history(
         self,
         coin_id: str,

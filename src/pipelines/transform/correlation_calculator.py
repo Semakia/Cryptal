@@ -3,8 +3,7 @@ Correlation Calculator for Crypto Portfolio Diversification
 Calculates correlation matrix to help build diversified portfolios.
 Source: crypto_prices_series table (Silver layer)
 """
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
@@ -42,6 +41,11 @@ class CorrelationCalculator:
                 port=self.db_config.get("port", 5432),
                 sslmode="require",
             )
+
+    def close(self):
+        """Close database connection."""
+        if self.conn and not self.conn.closed:
+            self.conn.close()
 
     def get_price_history(self, coin_id: str, start_date: str = None,
                           end_date: str = None, days: int = None) -> List[Dict]:
@@ -266,7 +270,14 @@ class CorrelationCalculator:
                     row["time_bucket"]: row["price_usd"] for row in data
                 }
 
-        coins = [c for c in coin_ids if c in all_prices]
+        # Exclure les coins trop clairsemés : l'intersection de timestamps se
+        # fait sur TOUS les coins retenus, donc un coin à 5 points ferait
+        # échouer toute la matrice. On ne garde que ceux ayant assez d'historique.
+        min_points = 10
+        coins = [
+            c for c in coin_ids
+            if c in all_prices and len(all_prices[c]) >= min_points
+        ]
         if len(coins) < 2:
             return {"error": "Not enough coins with data for correlation matrix"}
 
@@ -313,7 +324,9 @@ class CorrelationCalculator:
             List of coin identifiers
         """
         self.connect()
-        cursor = self.conn.cursor()
+        # La connexion n'a pas de cursor_factory par défaut ici : on force un
+        # RealDictCursor pour pouvoir indexer par nom (row["coin_id"]).
+        cursor = self.conn.cursor(cursor_factory=RealDictCursor)
 
         cursor.execute(
             """
