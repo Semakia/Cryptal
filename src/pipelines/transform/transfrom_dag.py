@@ -1,6 +1,7 @@
 from airflow import DAG
 from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
 from airflow.operators.empty import EmptyOperator
+from airflow.operators.bash import BashOperator
 from datetime import datetime, timedelta
 
 SPARK_MASTER = "spark://spark-master:7077"
@@ -74,15 +75,30 @@ with DAG(
         },
     )
 
-    # Note : la volatilité (stddev) et la matrice de corrélation sont déjà
-    # produites par run_transform (crypto_price_indicators +
-    # crypto_correlation_matrix). Les métriques fines par crypto sont calculées
-    # à la demande par l'API depuis crypto_prices_series.
-
-    # ── Workflow
-    (
-        start
-        >> build_price_series
-        >> [run_transform]  # parallèle
-        >> end
+    # ── ÉTAPE 3 : Couche GOLD (métriques pré-calculées qui nourrissent l'API)
+    # Script psycopg2 (réutilise les calculateurs, lecture silver) -> BashOperator.
+    # GOLD_PERIOD_DAYS=365 car la donnée démo date de nov-déc 2025 (~245j).
+    # En prod avec données fraîches : ramener à 30.
+    build_gold = BashOperator(
+        task_id="build_gold",
+        bash_command=(
+            f"python {SCRIPTS_PATH}/pipelines/transform/build_gold.py"
+        ),
+        append_env=True,  # conserve PYTHONPATH (=/opt/spark/scripts) du conteneur
+        env={
+            "SILVER_DB_HOST": "91.134.132.149",
+            "SILVER_DB_PORT": "5432",
+            "SILVER_DB_NAME": "crypto_viz_silver",
+            "SILVER_DB_USER": "cryptoviz",
+            "SILVER_DB_PASSWORD": "{{ var.value.silver_db_password }}",
+            "GOLD_DB_HOST": "91.134.132.149",
+            "GOLD_DB_PORT": "5432",
+            "GOLD_DB_NAME": "crypto_viz_gold",
+            "GOLD_DB_USER": "cryptoviz",
+            "GOLD_DB_PASSWORD": "{{ var.value.gold_db_password }}",
+            "GOLD_PERIOD_DAYS": "365",
+        },
     )
+
+    # ── Workflow : bronze -> silver -> gold
+    start >> build_price_series >> run_transform >> build_gold >> end
