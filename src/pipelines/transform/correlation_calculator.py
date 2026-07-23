@@ -26,6 +26,7 @@ class CorrelationCalculator:
 
         Args:
             db_config: Database configuration dict (SILVER_DB_*)
+            db_config: Database configuration dict (SILVER_DB_*)
         """
         self.db_config = db_config
         self.conn = None
@@ -61,6 +62,7 @@ class CorrelationCalculator:
                   start_date when provided.
 
         Returns:
+            List of dicts with price history data
             List of dicts with price history data
         """
         self.connect()
@@ -115,6 +117,31 @@ class CorrelationCalculator:
     def calculate_correlation(self, coin1: str, coin2: str,
                               start_date: str = None,
                               end_date: str = None) -> Dict:
+        return [dict(row) for row in results]
+
+    def get_returns_series(self, prices: List[float]) -> List[float]:
+        """
+        Calculate returns series from price series.
+
+        Args:
+            prices: List of prices in chronological order
+
+        Returns:
+            List of percentage returns
+        """
+        if len(prices) < 2:
+            return []
+
+        returns = []
+        for i in range(1, len(prices)):
+            ret = (prices[i] - prices[i-1]) / prices[i-1] * 100
+            returns.append(ret)
+
+        return returns
+
+    def calculate_correlation(self, coin1: str, coin2: str,
+                              start_date: str = None,
+                              end_date: str = None) -> Dict:
         """
         Calculate correlation between two cryptocurrencies.
 
@@ -123,8 +150,56 @@ class CorrelationCalculator:
             coin2: Second cryptocurrency identifier
             start_date: Start date in 'YYYY-MM-DD' format (optional)
             end_date: End date in 'YYYY-MM-DD' format (optional)
+            coin1: First cryptocurrency identifier
+            coin2: Second cryptocurrency identifier
+            start_date: Start date in 'YYYY-MM-DD' format (optional)
+            end_date: End date in 'YYYY-MM-DD' format (optional)
 
         Returns:
+            Dict with correlation metrics
+        """
+        prices1_data = self.get_price_history(coin1, start_date, end_date)
+        prices2_data = self.get_price_history(coin2, start_date, end_date)
+
+        if not prices1_data or not prices2_data:
+            return {"error": "No price data found", "coin1": coin1, "coin2": coin2}
+
+        # Align by timestamp
+        prices1 = {row["time_bucket"]: row["price_usd"] for row in prices1_data}
+        prices2 = {row["time_bucket"]: row["price_usd"] for row in prices2_data}
+
+        common_timestamps = sorted(set(prices1.keys()) & set(prices2.keys()))
+
+        if len(common_timestamps) < 10:
+            return {
+                "error": "Not enough common data points",
+                "coin1": coin1,
+                "coin2": coin2,
+                "common_points": len(common_timestamps)
+            }
+
+        prices1_aligned = [prices1[ts] for ts in common_timestamps]
+        prices2_aligned = [prices2[ts] for ts in common_timestamps]
+
+        returns1 = self.get_returns_series(prices1_aligned)
+        returns2 = self.get_returns_series(prices2_aligned)
+
+        if not returns1 or not returns2:
+            return {"error": "Not enough data for returns calculation"}
+
+        # Calculate Pearson correlation
+        n = len(returns1)
+        mean1 = sum(returns1) / n
+        mean2 = sum(returns2) / n
+
+        numerator = sum((r1 - mean1) * (r2 - mean2) for r1, r2 in zip(returns1, returns2))
+        denom1 = sum((r - mean1) ** 2 for r in returns1) ** 0.5
+        denom2 = sum((r - mean2) ** 2 for r in returns2) ** 0.5
+
+        if denom1 == 0 or denom2 == 0:
+            correlation = 0
+        else:
+            correlation = numerator / (denom1 * denom2)
             Dict with correlation metrics
         """
         prices1_data = self.get_price_history(coin1, start_date, end_date)
@@ -178,16 +253,24 @@ class CorrelationCalculator:
             "start_date": common_timestamps[0].strftime("%Y-%m-%d %H:%M:%S") if common_timestamps else None,
             "end_date": common_timestamps[-1].strftime("%Y-%m-%d %H:%M:%S") if common_timestamps else None,
             "interpretation": self._interpret_correlation(correlation)
+            "correlation": round(correlation, 4),
+            "common_data_points": len(common_timestamps),
+            "start_date": common_timestamps[0].strftime("%Y-%m-%d %H:%M:%S") if common_timestamps else None,
+            "end_date": common_timestamps[-1].strftime("%Y-%m-%d %H:%M:%S") if common_timestamps else None,
+            "interpretation": self._interpret_correlation(correlation)
         }
 
     def _interpret_correlation(self, corr: float) -> str:
+    def _interpret_correlation(self, corr: float) -> str:
         """
+        Interpret correlation coefficient.
         Interpret correlation coefficient.
 
         Args:
             corr: Correlation coefficient (-1 to 1)
 
         Returns:
+            String interpretation
             String interpretation
         """
         abs_corr = abs(corr)
@@ -212,6 +295,14 @@ class CorrelationCalculator:
         Returns:
             Diversification assessment
         """
+        if corr <= -0.5:
+            return "Excellent - Strong negative correlation provides excellent diversification"
+        elif corr <= 0:
+            return "Good - Low or negative correlation provides good diversification"
+        elif corr <= 0.3:
+            return "Moderate - Some diversification benefit"
+        elif corr <= 0.6:
+            return "Limited - High correlation reduces diversification benefit"
         if corr <= -0.5:
             return "Excellent - Strong negative correlation provides excellent diversification"
         elif corr <= 0:
@@ -332,8 +423,10 @@ class CorrelationCalculator:
             """
             SELECT DISTINCT coin_id
             FROM crypto_prices_series
+            FROM crypto_prices_series
             WHERE price_usd IS NOT NULL
             ORDER BY coin_id;
+            """
             """
         )
 

@@ -2,6 +2,8 @@
 Sharpe Ratio Calculator for Crypto Investments
 Calculates risk-adjusted returns using pre-aggregated price series data.
 Source: crypto_prices_series table (Silver layer)
+Calculates risk-adjusted returns using pre-aggregated price series data.
+Source: crypto_prices_series table (Silver layer)
 """
 from typing import Dict, List, Optional
 import psycopg2
@@ -20,7 +22,9 @@ class SharpeCalculator:
         """
         Initialize calculator with database connection.
         
+        
         Args:
+            db_config: Database configuration dict (SILVER_DB_*)
             db_config: Database configuration dict (SILVER_DB_*)
             risk_free_rate: Annual risk-free rate (default: 5% = 0.05)
         """
@@ -56,7 +60,7 @@ class SharpeCalculator:
         Args:
             coin_id: Cryptocurrency identifier
             days: Analysis period
-
+            
         Returns:
             Return metrics or None
         """
@@ -68,30 +72,42 @@ class SharpeCalculator:
             WITH period_prices AS (
                 SELECT price_usd, time_bucket
                 FROM crypto_prices_series
+                SELECT price_usd, time_bucket
+                FROM crypto_prices_series
                 WHERE coin_id = %s
+                AND price_usd IS NOT NULL
+                AND time_bucket >= NOW() - INTERVAL '1 day' * %s
+                ORDER BY time_bucket ASC
                 AND price_usd IS NOT NULL
                 AND time_bucket >= NOW() - INTERVAL '1 day' * %s
                 ORDER BY time_bucket ASC
             ),
             first_price AS (
                 SELECT price_usd, time_bucket
+                SELECT price_usd, time_bucket
                 FROM period_prices
                 LIMIT 1
             ),
             last_price AS (
                 SELECT price_usd, time_bucket
+                SELECT price_usd, time_bucket
                 FROM period_prices
+                ORDER BY time_bucket DESC
                 ORDER BY time_bucket DESC
                 LIMIT 1
             )
             SELECT
                 f.price_usd as first_price,
                 f.time_bucket as first_date,
+                f.time_bucket as first_date,
                 l.price_usd as last_price,
+                l.time_bucket as last_date,
+                EXTRACT(EPOCH FROM (l.time_bucket - f.time_bucket)) / 86400 as actual_days,
                 l.time_bucket as last_date,
                 EXTRACT(EPOCH FROM (l.time_bucket - f.time_bucket)) / 86400 as actual_days,
                 (SELECT COUNT(*) FROM period_prices) as data_points
             FROM first_price f, last_price l;
+            """,
             """,
             (coin_id, days),
         )
@@ -127,6 +143,8 @@ class SharpeCalculator:
             "absolute_return": absolute_return,
             "total_return": percentage_return,
             "annualized_return": annualized_return,
+            "total_return": percentage_return,
+            "annualized_return": annualized_return,
         }
 
     def calculate_volatility(
@@ -144,7 +162,7 @@ class SharpeCalculator:
         Args:
             coin_id: Cryptocurrency identifier
             days: Analysis period
-
+            
         Returns:
             Annualized volatility (%) or None
         """
@@ -153,7 +171,29 @@ class SharpeCalculator:
 
         # crypto_prices_series est agregee par heure -> 8760 periodes/an
         periods_per_year = 365 * 24
+        # crypto_prices_series est agregee par heure -> 8760 periodes/an
+        periods_per_year = 365 * 24
 
+        query = """
+        WITH price_series AS (
+            SELECT
+                price_usd,
+                LAG(price_usd) OVER (ORDER BY time_bucket) as prev_price
+            FROM crypto_prices_series
+            WHERE coin_id = %s
+            AND price_usd IS NOT NULL
+            AND time_bucket >= NOW() - INTERVAL '1 day' * %s
+        ),
+        returns AS (
+            SELECT
+                ((price_usd - prev_price) / prev_price) * 100 as return_pct
+            FROM price_series
+            WHERE prev_price IS NOT NULL
+        )
+        SELECT
+            STDDEV(return_pct) as std_volatility,
+            COUNT(*) as sample_size
+        FROM returns;
         query = """
         WITH price_series AS (
             SELECT
@@ -194,12 +234,12 @@ class SharpeCalculator:
     ) -> Optional[Dict]:
         """
         Calculate Sharpe Ratio for a cryptocurrency.
-
+        
         Args:
             coin_id: Cryptocurrency identifier
             days: Analysis period
             risk_free_rate: Annual risk-free rate (overrides default if provided)
-
+            
         Returns:
             Sharpe ratio and related metrics or None
         """
@@ -231,7 +271,10 @@ class SharpeCalculator:
             "data_points": returns["data_points"],
             "total_return": returns["total_return"],
             "annualized_return": returns["annualized_return"],
+            "total_return": returns["total_return"],
+            "annualized_return": returns["annualized_return"],
             "annualized_volatility": volatility,
+            "sharpe_ratio": sharpe_ratio,
             "sharpe_ratio": sharpe_ratio,
             "start_price": returns["start_price"],
             "end_price": returns["end_price"],
@@ -239,18 +282,25 @@ class SharpeCalculator:
 
     def _classify_sharpe(self, sharpe: float) -> str:
         """Classify Sharpe Ratio quality."""
+        """Classify Sharpe Ratio quality."""
         if sharpe >= 3:
+            return "Exceptional"
             return "Exceptional"
         elif sharpe >= 2:
             return "Excellent"
+            return "Excellent"
         elif sharpe >= 1:
+            return "Good"
             return "Good"
         elif sharpe >= 0:
             return "Acceptable"
+            return "Acceptable"
         else:
+            return "Poor (Negative)"
             return "Poor (Negative)"
 
     def compare_sharpe_ratios(self, coin_ids: List[str], days: int = 30) -> List[Dict]:
+        """Compare Sharpe Ratios across multiple cryptocurrencies."""
         """Compare Sharpe Ratios across multiple cryptocurrencies."""
         results = []
         for coin_id in coin_ids:
@@ -263,6 +313,7 @@ class SharpeCalculator:
     def find_best_risk_adjusted_investment(
         self, coin_ids: List[str], days: int = 30
     ) -> Optional[Dict]:
+        """Find the cryptocurrency with the best risk-adjusted return."""
         """Find the cryptocurrency with the best risk-adjusted return."""
         results = self.compare_sharpe_ratios(coin_ids, days)
         if not results:
@@ -277,14 +328,17 @@ class SharpeCalculator:
 
     def get_available_coins(self) -> List[str]:
         """Get list of available cryptocurrencies from crypto_prices_series."""
+        """Get list of available cryptocurrencies from crypto_prices_series."""
         self.connect()
         cursor = self.conn.cursor()
         cursor.execute(
             """
             SELECT DISTINCT coin_id
             FROM crypto_prices_series
+            FROM crypto_prices_series
             WHERE price_usd IS NOT NULL
             ORDER BY coin_id;
+            """
             """
         )
         coins = [row["coin_id"] for row in cursor.fetchall()]

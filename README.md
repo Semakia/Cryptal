@@ -213,7 +213,15 @@
 - Python 3.11+
 - Docker and Docker Compose
 - Neon account (free) → [neon.tech](https://neon.tech)
+## 🚀 Quick Start
 
+### Prerequisites
+- Node.js 18+ and npm
+- Python 3.11+
+- Docker and Docker Compose
+- Neon account (free) → [neon.tech](https://neon.tech)
+
+### 1. Clone the repository
 ### 1. Clone the repository
 
 ```bash
@@ -234,14 +242,97 @@ COINGECKO_API_URL=https://api.coingecko.com/api/v3
 
 # Spark
 SPARK_HOME=/opt/spark
+git clone https://github.com/Semakia/t-data-901-crypto_viz.git
+cd t-data-901-crypto_viz
+
+### 2. Configure environment variables
+Edit src/.env:
+# PostgreSQL Neon
+DATABASE_URL=postgresql://user:password@ep-xxx.region.aws.neon.tech/neondb?sslmode=require
+
+# Kafka
+KAFKA_BOOTSTRAP_SERVERS=localhost:9092
+KAFKA_TOPIC=crypto_prices_raw
+
+# CoinGecko
+COINGECKO_API_URL=https://api.coingecko.com/api/v3
+
+# Spark
+SPARK_HOME=/opt/spark
 ```
 
 ### 3. Start all services
+### 3. Start all services
 ```bash
+chmod +x start_docker.sh
 chmod +x start_docker.sh
 ./start_docker.sh
 ```
 
+This script will:
+
+Start Kafka and Zookeeper (Docker Compose)
+
+Start PostgreSQL (local or connect to Neon)
+
+Launch the FastAPI backend
+Launch the Spark cluster (optional)
+
+### 4. Start the frontend
+cd crypto-dashboard
+npm install
+npm run dev
+Open http://localhost:3000
+
+## 📊 API Endpoints
+
+| Method | Endpoint                  | Description                |
+| ------ | ------------------------- | -------------------------- |
+| GET    | /api/prices               | Latest prices per crypto   |
+| GET    | /api/prices/{coin_id}     | Price history for a crypto |
+| GET    | /api/indicators           | SMA, RSI, volatility       |
+| GET    | /api/indicators/{coin_id} | Indicators for a crypto    |
+| GET    | /api/correlation          | Correlation matrix         |
+| GET    | /api/health               | Health check               |
+
+Example:
+curl http://localhost:8000/api/prices/bitcoin
+
+{
+  "coin_id": "bitcoin",
+  "data": [
+    {
+      "time_bucket": "2026-04-14T22:00:00Z",
+      "price_usd": 68542.30,
+      "sma_20": 67234.15,
+      "rsi": 58.4,
+      "volatility": 1247.82
+    }
+  ]
+}
+
+## 🔧 Analytical Calculations
+| Indicator   | Period     | Description                       |
+| ----------- | ---------- | --------------------------------- |
+| SMA         | 20 periods | Simple Moving Average             |
+| RSI         | 14 periods | Relative Strength Index (0-100)   |
+| Volatility  | 24h        | Rolling standard deviation        |
+| Correlation | Daily      | Pearson correlation between pairs |
+
+## 🤝 Contributing
+Fork the project
+
+Create a feature branch
+
+Commit and push
+
+Open a Pull Request
+
+📄 License
+MIT License — see LICENSE
+
+👤 Author
+Semakia — Data Engineer
 This script will:
 
 Start Kafka and Zookeeper (Docker Compose)
