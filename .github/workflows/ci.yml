@@ -1,6 +1,8 @@
 name: CI
 
-# Portail qualité : marqueurs de conflit, lint & tests Python, lint & build front.
+# Boucle DevOps — étapes CODE, TEST, BUILD.
+# Déclenché sur chaque push de branche et chaque PR vers main.
+# (PLAN = issues/PR templates · SECURE = security.yml · RELEASE/DEPLOY/MONITOR = release.yml + deploy.yml)
 on:
   push:
     branches: ["**"]
@@ -15,11 +17,13 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  conflict-markers:
-    name: Marqueurs de conflit
+  # ─────────────────────────────── CODE ───────────────────────────────
+  code-quality:
+    name: "[CODE] Qualité (marqueurs conflit + ruff + eslint)"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Échouer si des marqueurs de merge subsistent
         run: |
           if grep -rnE '^(<<<<<<<|>>>>>>>)' \
@@ -32,11 +36,6 @@ jobs:
           fi
           echo "OK : aucun marqueur de conflit"
 
-  python-lint:
-    name: Lint Python (ruff)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -47,8 +46,22 @@ jobs:
         run: ruff check src
         continue-on-error: true
 
-  python-test:
-    name: Tests Python (pytest)
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Activer pnpm 10
+        run: corepack enable && corepack prepare pnpm@10 --activate
+      - name: Installer les dépendances front
+        working-directory: crypto-dashboard
+        run: pnpm install --frozen-lockfile
+      - name: ESLint (rapport seulement)
+        working-directory: crypto-dashboard
+        run: pnpm lint
+        continue-on-error: true
+
+  # ─────────────────────────────── TEST ───────────────────────────────
+  test:
+    name: "[TEST] Tests Python (pytest)"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -71,26 +84,29 @@ jobs:
           fi
           exit $code
 
-  frontend:
-    name: Frontend (lint + build)
+  # ─────────────────────────────── BUILD ──────────────────────────────
+  build:
+    name: "[BUILD] Build images Docker (${{ matrix.name }})"
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: crypto-dashboard
+    needs: [code-quality, test]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: api
+            dockerfile: src/api/Dockerfile
+          - name: frontend
+            dockerfile: crypto-dashboard/Dockerfile
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build (validation Dockerfile, sans push)
+        uses: docker/build-push-action@v6
         with:
-          node-version: "22"
-      - name: Activer pnpm 10
-        run: corepack enable && corepack prepare pnpm@10 --activate
-      - name: Installer les dépendances
-        run: pnpm install --frozen-lockfile
-      - name: Lint (rapport seulement)
-        run: pnpm lint
-        continue-on-error: true
-      - name: Build (type-check + next build)
-        env:
-          NEXT_PUBLIC_API_URL: http://localhost:8000
-          NEXT_TELEMETRY_DISABLED: "1"
-        run: pnpm build
+          context: .
+          file: ${{ matrix.dockerfile }}
+          push: false
+          load: false
+          tags: cryptoviz-${{ matrix.name }}:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

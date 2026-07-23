@@ -1,6 +1,7 @@
 name: Security
 
-# Volet DevSecOps : SAST, scan des dépendances, scan de secrets, scan d'images.
+# Boucle DevOps — étape transverse SECURE (DevSecOps).
+# SAST, scan des dépendances, scan de secrets, scan d'images de conteneurs.
 on:
   push:
     branches: ["**"]
@@ -18,7 +19,7 @@ concurrency:
 
 jobs:
   sast:
-    name: SAST (bandit + semgrep)
+    name: "[SECURE] SAST (bandit + semgrep)"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -33,7 +34,7 @@ jobs:
         continue-on-error: true
 
   dependencies:
-    name: Scan des dépendances
+    name: "[SECURE] Scan des dépendances"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -56,7 +57,7 @@ jobs:
         continue-on-error: true
 
   secrets:
-    name: Scan de secrets (gitleaks)
+    name: "[SECURE] Scan de secrets (gitleaks)"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -67,7 +68,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   container:
-    name: Build + scan image (${{ matrix.name }})
+    name: "[SECURE] Scan image Trivy (${{ matrix.name }})"
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
