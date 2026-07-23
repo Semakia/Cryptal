@@ -14,8 +14,6 @@ import { formatNumber, CRYPTO_NAMES, CRYPTO_SYMBOLS } from "@/lib/utils";
 import { useState, useMemo } from "react";
 import { Shield, Link2, Unlink } from "lucide-react";
 
-const CRYPTOS = ["bitcoin", "ethereum", "binancecoin", "solana", "hyperliquid"];
-
 function getCorrelationColor(value: number): string {
   // Adjusted color scale for crypto (most correlations are 0.8-1.0)
   // This provides better visual differentiation in the typical crypto range
@@ -88,28 +86,40 @@ export function CorrelationHeatmap() {
     col: number;
   } | null>(null);
 
+  // Liste dynamique : les cryptos réellement présentes dans la réponse de
+  // corrélation (union des paires) — plus de liste codée en dur.
+  const cryptos = useMemo(() => {
+    if (!data) return [];
+    const set = new Set<string>();
+    data.correlations.forEach((c) => {
+      set.add(c.crypto_1);
+      set.add(c.crypto_2);
+    });
+    return Array.from(set).sort();
+  }, [data]);
+
   const matrix = useMemo(() => {
     if (!data) return [];
 
-    const result: (number | null)[][] = CRYPTOS.map(() =>
-      CRYPTOS.map(() => null),
+    const result: (number | null)[][] = cryptos.map(() =>
+      cryptos.map(() => null),
     );
 
     data.correlations.forEach((c) => {
-      const i = CRYPTOS.indexOf(c.crypto_1);
-      const j = CRYPTOS.indexOf(c.crypto_2);
+      const i = cryptos.indexOf(c.crypto_1);
+      const j = cryptos.indexOf(c.crypto_2);
       if (i !== -1 && j !== -1) {
         result[i][j] = c.correlation;
         result[j][i] = c.correlation;
       }
     });
 
-    CRYPTOS.forEach((_, i) => {
+    cryptos.forEach((_, i) => {
       result[i][i] = 1;
     });
 
     return result;
-  }, [data]);
+  }, [data, cryptos]);
 
   // Calculate diversification metrics from correlation data
   const diversificationMetrics = useMemo(() => {
@@ -293,12 +303,12 @@ export function CorrelationHeatmap() {
             <div className="inline-block min-w-full">
               <div className="flex">
                 <div className="w-20" />
-                {CRYPTOS.map((crypto) => (
+                {cryptos.map((crypto) => (
                   <div
                     key={crypto}
                     className="w-16 text-center text-xs font-medium text-muted-foreground py-2"
                   >
-                    {CRYPTO_SYMBOLS[crypto]}
+                    {CRYPTO_SYMBOLS[crypto] || crypto}
                   </div>
                 ))}
               </div>
@@ -306,7 +316,7 @@ export function CorrelationHeatmap() {
               {matrix.map((row, i) => (
                 <div key={i} className="flex">
                   <div className="w-20 flex items-center text-xs font-medium text-muted-foreground pr-2">
-                    {CRYPTO_SYMBOLS[CRYPTOS[i]]}
+                    {CRYPTO_SYMBOLS[cryptos[i]] || cryptos[i]}
                   </div>
                   {row.map((value, j) => {
                     const isHovered =
@@ -342,8 +352,8 @@ export function CorrelationHeatmap() {
                           i !== j && (
                             <div className="absolute z-20 bottom-full left-1/2 -translate-x-1/2 mb-2 bg-popover border border-border rounded-lg p-3 shadow-lg whitespace-nowrap">
                               <p className="font-medium text-sm">
-                                {CRYPTO_NAMES[CRYPTOS[i]]} -{" "}
-                                {CRYPTO_NAMES[CRYPTOS[j]]}
+                                {CRYPTO_NAMES[cryptos[i]] || cryptos[i]} -{" "}
+                                {CRYPTO_NAMES[cryptos[j]] || cryptos[j]}
                               </p>
                               <p className="text-lg font-mono font-bold">
                                 {formatNumber(value || 0, 3)}

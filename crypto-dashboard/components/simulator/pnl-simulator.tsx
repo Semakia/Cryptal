@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { useSimulatePnL, useComparePnL, useBestEntry } from "@/hooks/use-crypto-data"
+import { useSimulatePnL, useComparePnL, useBestEntry, useCryptos } from "@/hooks/use-crypto-data"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -12,11 +12,13 @@ import { formatCurrency, formatPercent, formatDate, formatNumber, CRYPTO_NAMES, 
 import { Calculator, TrendingUp, TrendingDown, Star, Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
-const CRYPTOS = ["bitcoin", "ethereum", "binancecoin", "solana", "hyperliquid"]
 const QUICK_AMOUNTS = [100, 500, 1000, 5000]
 
 export function PnLSimulator() {
   const [crypto, setCrypto] = useState("bitcoin")
+  // Liste dynamique des cryptos disponibles en base (endpoint /api/data/cryptos).
+  const { data: cryptos } = useCryptos()
+  const availableCryptos = (cryptos ?? []).map((c) => c.coin_id)
   const [amount, setAmount] = useState("1000")
   const [purchaseDate, setPurchaseDate] = useState(() => {
     const d = new Date()
@@ -90,9 +92,9 @@ export function PnLSimulator() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {CRYPTOS.map((c) => (
+                  {availableCryptos.map((c) => (
                     <SelectItem key={c} value={c}>
-                      {CRYPTO_NAMES[c]}
+                      {CRYPTO_NAMES[c] || c}
                     </SelectItem>
                   ))}
                 </SelectContent>

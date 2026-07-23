@@ -148,11 +148,8 @@ export interface TransformedHistoricalPrices {
 
 export interface VolatilityMetric {
   crypto: string;
+  period_volatility: number;
   annualized_volatility: number;
-  price_range: {
-    min: number;
-    max: number;
-  };
   mean_price: number;
 }
 
@@ -341,11 +338,8 @@ export const api = {
       period_days: period,
       metrics: response.map((m) => ({
         crypto: m.coin_id,
+        period_volatility: m.period_volatility,
         annualized_volatility: m.annualized_volatility,
-        price_range: {
-          min: m.min_price,
-          max: m.max_price,
-        },
         mean_price: m.mean_price,
       })),
     };
