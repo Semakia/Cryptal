@@ -1,35 +1,43 @@
 # Pipeline CI/CD — Boucle DevOps
 
-La chaîne CI/CD suit les étapes de la boucle DevOps. Chaque étape est matérialisée
-par un job (préfixé `[ÉTAPE]`) dans l'un des workflows GitHub Actions.
+Chaque étape de la boucle DevOps a **son propre workflow** (un fichier =
+une étape). Le volet **sécurité (DevSecOps)** est intégré à l'étape **CODE**
+sous forme de jobs `code: *-scan`.
 
 ```
-        ┌──────────────────────── Dev ────────────────────────┐   ┌──────────── Ops ────────────┐
-PLAN ─▶ CODE ─▶ BUILD ─▶ TEST ─▶ (SECURE) ─▶ RELEASE ─▶ DEPLOY ─▶ MONITOR ─▶ FEEDBACK ─┐
-  ▲                                                                                      │
-  └──────────────────────────────────────────────────────────────────────────────────┘
+        ┌────────────────────────── Dev ──────────────────────────┐   ┌──────────── Ops ────────────┐
+PLAN ─▶ CODE ─▶ TEST ─▶ BUILD ─▶ RELEASE ─▶ DEPLOY ─▶ MONITOR ─▶ FEEDBACK ─┐
+  ▲                                                                         │
+  └───────────────────────────────────────────────────────────────────────┘
 ```
 
-| Étape        | Où                              | Détail                                                                 |
-| ------------ | ------------------------------- | ---------------------------------------------------------------------- |
-| **PLAN**     | `ISSUE_TEMPLATE/`, PR template  | Cadrage des tâches et des PR avant le code                              |
-| **CODE**     | `ci.yml` → `code-quality`       | Marqueurs de conflit, ruff (Python), eslint (front)                    |
-| **TEST**     | `ci.yml` → `test`               | pytest sur `src/test`                                                   |
-| **BUILD**    | `ci.yml` → `build`              | Build des images Docker API + frontend (validation, sans push)         |
-| **SECURE**   | `security.yml`                  | SAST (bandit/semgrep), scan deps (pip-audit/pnpm audit), secrets (gitleaks), image (trivy) — transverse |
-| **RELEASE**  | `release.yml`                   | Push des images sur GHCR (`latest`/`sha`/`semver`) + GitHub Release sur tag `v*` |
-| **DEPLOY**   | `deploy.yml` → `deploy`         | SSH → `docker compose pull && up` sur le serveur (opt-in `DEPLOY_ENABLED`) |
-| **MONITOR**  | `deploy.yml` → `monitor`        | Health checks post-déploiement (`/health`, front)                      |
-| **FEEDBACK** | `deploy.yml` → `feedback`       | Ouverture automatique d'une issue d'incident si échec + re-scan sécurité hebdo |
+| Étape        | Fichier                    | Jobs                                                                 |
+| ------------ | -------------------------- | ------------------------------------------------------------------- |
+| **PLAN**     | `ISSUE_TEMPLATE/`, `pull_request_template.md` | cadrage des tâches et des PR                      |
+| **CODE**     | `workflows/code.yml`       | `code: lint` · `code: sast-scan` · `code: secret-scan` · `code: deps-scan` · `code: trivy-scan` |
+| **TEST**     | `workflows/test.yml`       | `test: pytest`                                                       |
+| **BUILD**    | `workflows/build.yml`      | `build: docker` (api + frontend, sans push)                         |
+| **RELEASE**  | `workflows/release.yml`    | `release: image` (→ GHCR) · `release: github-release` (tag `v*`)     |
+| **DEPLOY**   | `workflows/deploy.yml`     | `deploy: server` (SSH compose up, opt-in `DEPLOY_ENABLED`)          |
+| **MONITOR**  | `workflows/monitor.yml`    | `monitor: healthchecks` (déclenché après un deploy réussi)          |
+| **FEEDBACK** | `workflows/feedback.yml`   | `feedback: incident-issue` (issue auto si deploy/monitor échoue)     |
+
+## Enchaînement des étapes Ops
+
+`5 · Deploy` → (succès) → `6 · Monitor` → (échec d'une des deux) → `7 · Feedback`,
+via le déclencheur `workflow_run`.
 
 ## Déclencheurs
 
-| Workflow      | push branche | PR → main | push `main` | tag `v*` | manuel | planifié |
-| ------------- | :----------: | :-------: | :---------: | :------: | :----: | :------: |
-| `ci.yml`      | ✅           | ✅        | ✅          |          |        |          |
-| `security.yml`| ✅           | ✅        | ✅          |          |        | hebdo    |
-| `release.yml` |              |           | ✅          | ✅       |        |          |
-| `deploy.yml`  |              |           |             | (release)| ✅     |          |
+| Workflow      | push branche | PR → main | push `main` | tag `v*` | manuel | après un autre workflow |
+| ------------- | :----------: | :-------: | :---------: | :------: | :----: | :---------------------: |
+| `code.yml`    | ✅           | ✅        | ✅          |          |        | + hebdo (cron)          |
+| `test.yml`    | ✅           | ✅        | ✅          |          |        |                         |
+| `build.yml`   | ✅           | ✅        | ✅          |          |        |                         |
+| `release.yml` |              |           | ✅          | ✅       |        |                         |
+| `deploy.yml`  |              |           |             | (release)| ✅     |                         |
+| `monitor.yml` |              |           |             |          | ✅     | après `5 · Deploy`      |
+| `feedback.yml`|              |           |             |          |        | après `5 · Deploy` / `6 · Monitor` |
 
 ## Activer le déploiement
 
