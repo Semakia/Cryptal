@@ -53,13 +53,17 @@ class VolatilityCalculator:
         if self.conn and not self.conn.closed:
             self.conn.close()
 
-    def calculate_volatility(self, coin_id: str, days: int = 30) -> Optional[Dict]:
+    def calculate_volatility(
+        self,
+        coin_id: str,
+        days: int = 30
+    ) -> Optional[Dict]:
         """
         Calculate volatility metrics for a cryptocurrency.
-        
+
         Utilise directement crypto_prices_series qui contient deja
         les prix agregees par heure. Pas besoin de re-agreger.
-        
+
         Args:
             coin_id: Cryptocurrency identifier
             days: Number of days to look back (default: 30)
@@ -161,7 +165,11 @@ class VolatilityCalculator:
             "price_range": price_range,
         }
 
-    def compare_volatility(self, coin_ids: List[str], days: int = 30) -> List[Dict]:
+    def compare_volatility(
+        self,
+        coin_ids: List[str],
+        days: int = 30
+    ) -> List[Dict]:
         """
         Compare volatility across multiple cryptocurrencies.
         
@@ -181,7 +189,10 @@ class VolatilityCalculator:
         return results
 
     def get_risk_adjusted_returns(
-        self, coin_id: str, investment_amount: float, days: int = 30
+        self,
+        coin_id: str,
+        investment_amount: float,
+        days: int = 30
     ) -> Optional[Dict]:
         """
         Calculate risk-adjusted return metrics.

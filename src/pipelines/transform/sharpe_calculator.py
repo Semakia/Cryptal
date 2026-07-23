@@ -12,12 +12,6 @@ class SharpeCalculator:
     """
     Calculates Sharpe Ratio and risk-adjusted return metrics.
     
-    Source de données : table crypto_prices_series (Silver layer)
-    Cette table contient deja des prix agregees par heure :
-    - coin_id : identifiant de la crypto
-    - time_bucket : timestamp tronque a l'heure
-    - price_usd : prix moyen sur le bucket
-    
     Sharpe Ratio = (Return - Risk-Free Rate) / Volatility
     Higher is better: more return per unit of risk.
     """
@@ -55,10 +49,10 @@ class SharpeCalculator:
     def calculate_returns(self, coin_id: str, days: int = 30) -> Optional[Dict]:
         """
         Calculate return metrics for a cryptocurrency.
-        
+
         Utilise crypto_prices_series qui contient deja les prix
         agregees par heure. Pas besoin de re-agreger.
-        
+
         Args:
             coin_id: Cryptocurrency identifier
             days: Analysis period
@@ -135,13 +129,18 @@ class SharpeCalculator:
             "annualized_return": annualized_return,
         }
 
-    def calculate_volatility(self, coin_id: str, days: int = 30) -> Optional[float]:
+    def calculate_volatility(
+        self,
+        coin_id: str,
+        days: int = 30
+    ) -> Optional[float]:
         """
-        Calculate annualized volatility (standard deviation) from crypto_prices_series.
-        
+        Calculate annualized volatility (standard deviation) from
+         crypto_prices_series.
+
         La table crypto_prices_series est deja agregee par heure,
         donc on calcule directement les returns sans re-agreger.
-        
+
         Args:
             coin_id: Cryptocurrency identifier
             days: Analysis period

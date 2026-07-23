@@ -1,5 +1,7 @@
 # Multi-stage build for Next.js frontend
-FROM node:20-alpine AS base
+# Node 22 : requis par pnpm récent (pnpm 11 casse sur Node 20 :
+# ERR_UNKNOWN_BUILTIN_MODULE) et confortable pour Next.js 16.
+FROM node:22-alpine AS base
 
 # Install dependencies only when needed
 FROM base AS deps
@@ -7,7 +9,7 @@ RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
 # Install pnpm
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable && corepack prepare pnpm@10 --activate
 
 # Copy package files
 COPY crypto-dashboard/package.json crypto-dashboard/pnpm-lock.yaml* ./
@@ -20,7 +22,7 @@ FROM base AS builder
 WORKDIR /app
 
 # Install pnpm
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable && corepack prepare pnpm@10 --activate
 
 # Copy dependencies
 COPY --from=deps /app/node_modules ./node_modules

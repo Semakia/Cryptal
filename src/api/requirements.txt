@@ -1,15 +1,6 @@
-<<<<<<< HEAD
-fastapi==0.104.1
-uvicorn[standard]==0.24.0
-psycopg2-binary==2.9.9
-python-dotenv==1.0.0
-pydantic==2.5.0
-python-multipart==0.0.6
-=======
 fastapi==0.115.5
 uvicorn[standard]==0.32.1
 psycopg2-binary==2.9.10
 python-dotenv==1.0.1
 pydantic==2.10.3
 python-multipart==0.0.20
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1

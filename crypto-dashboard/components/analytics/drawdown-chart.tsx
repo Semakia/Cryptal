@@ -46,8 +46,6 @@ import {
 import { TrendingDown, AlertTriangle, Clock, Target } from "lucide-react";
 import { useAppState } from "@/lib/store";
 
-const CRYPTOS = ["bitcoin", "ethereum", "binancecoin", "solana", "hyperliquid"];
-
 function getSeverityEmoji(drawdown: number): string {
   const pct = Math.abs(drawdown);
   if (pct < 10) return "😊";
@@ -65,6 +63,9 @@ export function DrawdownChart() {
   if (error)
     return <ErrorState message={error.message} onRetry={() => refetch()} />;
 
+  // Liste dynamique : uniquement les cryptos qui ont réellement une métrique
+  // de drawdown renvoyée par l'API (plus de liste codée en dur).
+  const availableCryptos = data?.metrics.map((m) => m.crypto) ?? [];
   const selectedMetric = data?.metrics.find((m) => m.crypto === selectedCrypto);
   const chartData =
     selectedMetric?.drawdown_periods.map((p) => ({
@@ -80,9 +81,9 @@ export function DrawdownChart() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {CRYPTOS.map((crypto) => (
+            {availableCryptos.map((crypto) => (
               <SelectItem key={crypto} value={crypto}>
-                {CRYPTO_NAMES[crypto]}
+                {CRYPTO_NAMES[crypto] || crypto}
               </SelectItem>
             ))}
           </SelectContent>

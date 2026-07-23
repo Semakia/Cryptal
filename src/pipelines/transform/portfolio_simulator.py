@@ -17,6 +17,8 @@ def to_naive_utc(dt: datetime) -> datetime:
     if dt.tzinfo is not None:
         return dt.astimezone(timezone.utc).replace(tzinfo=None)
     return dt
+
+
 class PortfolioSimulator:
     """
     Simulates cryptocurrency investment portfolios and calculates P&L.
@@ -96,10 +98,10 @@ class PortfolioSimulator:
     def get_latest_price(self, coin_id: str) -> Optional[float]:
         """
         Get the latest available price for a crypto.
-        
+
         Args:
             coin_id: Cryptocurrency identifier
-            
+
         Returns:
             Latest price in USD or None
         """
@@ -278,7 +280,7 @@ class PortfolioSimulator:
     def get_available_coins(self) -> List[str]:
         """
         Get list of available cryptocurrencies in the database.
-        
+
         Returns:
             List of coin IDs
         """
@@ -302,10 +304,10 @@ class PortfolioSimulator:
     def get_date_range(self, coin_id: str) -> Tuple[datetime, datetime]:
         """
         Get the available date range for a cryptocurrency.
-        
+
         Args:
             coin_id: Cryptocurrency identifier
-            
+
         Returns:
             Tuple of (earliest_date, latest_date)
         """

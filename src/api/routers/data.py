@@ -12,12 +12,9 @@ from models import CryptoInfo, LatestPrices, PriceData
 
 router = APIRouter(prefix="/data", tags=["Data"])
 
-<<<<<<< HEAD
-=======
 # Cryptocurrencies to exclude from all endpoints
 EXCLUDED_CRYPTOS = ["ripple", "tether"]
 
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
 
 @router.get("/cryptos", response_model=List[CryptoInfo])
 async def get_cryptocurrencies(db: DatabaseConnection = Depends(get_db)):
@@ -39,17 +36,11 @@ async def get_cryptocurrencies(db: DatabaseConnection = Depends(get_db)):
                 MIN(timestamp) as earliest_date,
                 MAX(timestamp) as latest_date
             FROM crypto_prices
-<<<<<<< HEAD
-            GROUP BY coin_id
-            ORDER BY coin_id
-            """
-=======
             WHERE coin_id NOT IN %s
             GROUP BY coin_id
             ORDER BY coin_id
             """,
             (tuple(EXCLUDED_CRYPTOS),),
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
         )
         results = cursor.fetchall()
         return [
@@ -100,37 +91,21 @@ async def get_prices(
                 SELECT id, coin_id, price_usd, price_eur, price_gbp,
                        change_24h, market_cap, timestamp
                 FROM crypto_prices
-<<<<<<< HEAD
-                WHERE coin_id = %s AND timestamp >= %s
-                ORDER BY timestamp DESC
-                LIMIT %s
-            """
-            cursor.execute(query, (crypto, cutoff_date, limit))
-=======
                 WHERE coin_id = %s AND timestamp >= %s AND coin_id NOT IN %s
                 ORDER BY timestamp DESC
                 LIMIT %s
             """
             cursor.execute(query, (crypto, cutoff_date, tuple(EXCLUDED_CRYPTOS), limit))
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
         else:
             query = """
                 SELECT id, coin_id, price_usd, price_eur, price_gbp,
                        change_24h, market_cap, timestamp
                 FROM crypto_prices
-<<<<<<< HEAD
-                WHERE timestamp >= %s
-                ORDER BY timestamp DESC
-                LIMIT %s
-            """
-            cursor.execute(query, (cutoff_date, limit))
-=======
                 WHERE timestamp >= %s AND coin_id NOT IN %s
                 ORDER BY timestamp DESC
                 LIMIT %s
             """
             cursor.execute(query, (cutoff_date, tuple(EXCLUDED_CRYPTOS), limit))
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
 
         results = cursor.fetchall()
         return [PriceData(**row) for row in results]
@@ -158,16 +133,10 @@ async def get_latest_prices(db: DatabaseConnection = Depends(get_db)):
                 id, coin_id, price_usd, price_eur, price_gbp,
                 change_24h, market_cap, timestamp
             FROM crypto_prices
-<<<<<<< HEAD
-            ORDER BY coin_id, timestamp DESC
-        """
-        cursor.execute(query)
-=======
             WHERE coin_id NOT IN %s
             ORDER BY coin_id, timestamp DESC
         """
         cursor.execute(query, (tuple(EXCLUDED_CRYPTOS),))
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
         results = cursor.fetchall()
 
         if not results:
