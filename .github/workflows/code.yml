@@ -132,10 +132,17 @@ jobs:
           tags: cryptoviz-${{ matrix.name }}:scan
           cache-from: type=gha
       - name: Trivy — bloque sur CRITICAL
-        uses: aquasecurity/trivy-action@v0.33.1
-        with:
-          image-ref: cryptoviz-${{ matrix.name }}:scan
-          severity: CRITICAL
-          ignore-unfixed: true
-          exit-code: "1"
-          vuln-type: os,library
+        # Image Docker officielle plutôt que trivy-action/setup-trivy (dont le
+        # script d'install télécharge le binaire via l'API GitHub -> flaky).
+        # Trivy accède à l'image locale via le socket Docker monté.
+        run: |
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v "${{ github.workspace }}/.trivycache:/root/.cache" \
+            aquasec/trivy:0.58.1 image \
+            --scanners vuln \
+            --severity CRITICAL \
+            --ignore-unfixed \
+            --exit-code 1 \
+            --no-progress \
+            cryptoviz-${{ matrix.name }}:scan
