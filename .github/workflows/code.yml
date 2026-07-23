@@ -132,7 +132,7 @@ jobs:
           tags: cryptoviz-${{ matrix.name }}:scan
           cache-from: type=gha
       - name: Trivy — bloque sur CRITICAL
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.29.0
         with:
           image-ref: cryptoviz-${{ matrix.name }}:scan
           severity: CRITICAL
