@@ -48,9 +48,19 @@ class DrawdownCalculator:
                 sslmode="require",
             )
 
-    def get_price_history(self, coin_id: str, start_date: str = None) -> List[Dict]:
+    def close(self):
+        """Close database connection."""
+        if self.conn and not self.conn.closed:
+            self.conn.close()
+
+    def get_price_history(
+        self,
+        coin_id: str,
+        start_date: str = None
+    ) -> List[Dict]:
         """
-        Fetch hourly price history for a cryptocurrency from crypto_prices_series.
+        Fetch hourly price history for a cryptocurrency
+         from crypto_prices_series.
 
         Args:
             coin_id: Cryptocurrency identifier (e.g., 'bitcoin', 'ethereum')
@@ -107,48 +117,87 @@ class DrawdownCalculator:
 
         return drawdowns
 
-    def calculate_max_drawdown(self, coin_id: str, start_date: str = None) -> Dict:
+    def calculate_max_drawdown(
+        self,
+        coin_id: str,
+        days: int = 30
+    ) -> Dict:
         """
-        Calculate maximum drawdown for a cryptocurrency.
+        Calculate maximum drawdown for a cryptocurrency over a lookback period.
 
         Args:
             coin_id: Cryptocurrency identifier
-            start_date: Start date in 'YYYY-MM-DD' format (optional)
+            days: Number of days to look back (default: 30)
 
         Returns:
-            Dict with max drawdown metrics
+            Dict aligned with the API DrawdownMetrics model:
+            coin_id, period_days, data_points, max_drawdown_pct,
+            max_drawdown_value, peak_price, trough_price, peak_date, trough_date.
         """
-        history = self.get_price_history(coin_id, start_date)
+        self.connect()
+        cursor = self.conn.cursor(cursor_factory=RealDictCursor)
+        cursor.execute(
+            """
+            SELECT time_bucket, price_usd
+            FROM crypto_prices_series
+            WHERE coin_id = %s
+              AND price_usd IS NOT NULL
+              AND time_bucket >= NOW() - INTERVAL '1 day' * %s
+            ORDER BY time_bucket ASC
+            """,
+            (coin_id, days),
+        )
+        history = cursor.fetchall()
+        cursor.close()
 
-        if not history:
-            return {"error": "No price data found", "coin_id": coin_id}
+        if not history or len(history) < 2:
+            return {"error": f"No price data found for {coin_id}", "coin_id": coin_id}
 
-        prices = [row["price_usd"] for row in history]
+        prices = [float(row["price_usd"]) for row in history]
         timestamps = [row["time_bucket"] for row in history]
-        drawdowns = self.calculate_drawdown_series(prices)
 
-        max_dd = max(drawdowns)
-        max_dd_idx = drawdowns.index(max_dd)
-        max_dd_date = timestamps[max_dd_idx]
+        # Track the running peak and the deepest decline from any peak.
+        running_peak = prices[0]
+        running_peak_idx = 0
+        max_dd_pct = 0.0
+        peak_price = prices[0]
+        peak_idx = 0
+        trough_price = prices[0]
+        trough_idx = 0
 
-        # Find peak before max drawdown
-        peak_price = prices[max_dd_idx]
-        peak_date = timestamps[max_dd_idx]
+        for i, price in enumerate(prices):
+            if price > running_peak:
+                running_peak = price
+                running_peak_idx = i
+            drawdown = (
+                (running_peak - price) / running_peak * 100
+                if running_peak > 0
+                else 0.0
+            )
+            if drawdown > max_dd_pct:
+                max_dd_pct = drawdown
+                peak_price = running_peak
+                peak_idx = running_peak_idx
+                trough_price = price
+                trough_idx = i
 
         return {
             "coin_id": coin_id,
-            "max_drawdown_pct": round(max_dd, 2),
-            "max_drawdown_date": max_dd_date.strftime("%Y-%m-%d %H:%M:%S") if max_dd_date else None,
-            "peak_price": round(peak_price, 2),
-            "peak_date": peak_date.strftime("%Y-%m-%d %H:%M:%S") if peak_date else None,
-            "current_price": round(prices[-1], 2) if prices else None,
-            "current_drawdown_pct": round(drawdowns[-1], 2) if drawdowns else None,
+            "period_days": days,
             "data_points": len(prices),
-            "start_date": timestamps[0].strftime("%Y-%m-%d %H:%M:%S") if timestamps else None,
-            "end_date": timestamps[-1].strftime("%Y-%m-%d %H:%M:%S") if timestamps else None,
+            "max_drawdown_pct": round(max_dd_pct, 2),
+            "max_drawdown_value": round(peak_price - trough_price, 2),
+            "peak_price": round(peak_price, 2),
+            "trough_price": round(trough_price, 2),
+            "peak_date": timestamps[peak_idx],
+            "trough_date": timestamps[trough_idx],
         }
 
-    def calculate_drawdown_summary(self, coin_id: str, start_date: str = None) -> Dict:
+    def calculate_drawdown_summary(
+        self,
+        coin_id: str,
+        start_date: str = None
+    ) -> Dict:
         """
         Calculate comprehensive drawdown summary for a cryptocurrency.
 

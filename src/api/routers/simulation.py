@@ -13,6 +13,8 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Query
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 
+# PortfolioSimulator lit la table brute crypto_prices (Bronze, prix horodatés)
+# et n'a PAS été migré vers crypto_prices_series -> config Bronze (get_db_config).
 from database import DatabaseConnection, get_db, get_db_config
 from models import (
     BestEntryPointRequest,
@@ -22,12 +24,8 @@ from models import (
 )
 from pipelines.transform.portfolio_simulator import PortfolioSimulator
 
-<<<<<<< HEAD
 router = APIRouter(prefix="/simulate", tags=["Simulation"])
 
-=======
-router = APIRouter(prefix="/simulate", tags=["Simulation"])  
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
 
 @router.post("/pnl", response_model=PnLSimulationResult)
 async def simulate_pnl(
@@ -76,11 +74,11 @@ async def simulate_pnl(
             purchase_date=result["purchase_date"],
             purchase_price=result["purchase_price"],
             quantity=result["quantity"],
-<<<<<<< HEAD
-            sell_date=result["sell_date"],
-=======
-            sell_date=( None if result.get("sell_date") in ("latest", "", None) else result["sell_date"]),
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
+            sell_date=(
+                None
+                if result.get("sell_date") in ("latest", "", None)
+                else result["sell_date"]
+            ),
             sell_price=result["sell_price"],
             current_value=result["current_value"],
             pnl=result["pnl"],
@@ -151,8 +149,11 @@ async def compare_investments(
                 purchase_date=r["purchase_date"],
                 purchase_price=r["purchase_price"],
                 quantity=r["quantity"],
-<<<<<<< HEAD
-                sell_date=r["sell_date"],
+                sell_date=(
+                    None
+                    if r.get("sell_date") in ("latest", "", None)
+                    else r["sell_date"]
+                ),
                 sell_price=r["sell_price"],
                 current_value=r["current_value"],
                 pnl=r["pnl"],
@@ -160,21 +161,6 @@ async def compare_investments(
             )
             for r in results
         ]
-
-=======
-                sell_date=(
-                    None
-                    if r.get("sell_date") in ("latest", "", None)
-                    else r["sell_date"]
-                ),
-            sell_price=r["sell_price"],
-            current_value=r["current_value"],
-            pnl=r["pnl"],
-            roi=r["roi"],
-        )
-        for r in results
-    ]
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
     except HTTPException:
         raise
     except Exception as e:
@@ -225,11 +211,7 @@ async def find_best_entry_point(
         return BestEntryPointResult(
             coin_id=result["coin_id"],
             investment_amount=result["investment_amount"],
-<<<<<<< HEAD
-            lookback_days=result["lookback_days"],
-=======
-            lookback_days=request.lookback_days,  
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
+            lookback_days=request.lookback_days,
             best_entry_date=result["best_entry_date"],
             best_entry_price=result["best_entry_price"],
             quantity=result["quantity"],
@@ -287,11 +269,7 @@ async def get_best_entry_point(
         return BestEntryPointResult(
             coin_id=result["coin_id"],
             investment_amount=result["investment_amount"],
-<<<<<<< HEAD
-            lookback_days=result["lookback_days"],
-=======
             lookback_days=lookback_days,
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
             best_entry_date=result["best_entry_date"],
             best_entry_price=result["best_entry_price"],
             quantity=result["quantity"],

@@ -3,16 +3,10 @@ Pydantic models for API request and response schemas.
 """
 
 from datetime import datetime
-<<<<<<< HEAD
-from typing import List, Optional
-
-from pydantic import BaseModel, Field
-=======
 from decimal import Decimal
 from typing import List, Optional
 
 from pydantic import BaseModel, Field, field_validator
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
 
 # ============================================================================
 # Request Models
@@ -75,8 +69,6 @@ class PriceData(BaseModel):
     market_cap: Optional[int] = None
     timestamp: datetime
 
-<<<<<<< HEAD
-=======
     @field_validator("market_cap", mode="before")
     @classmethod
     def convert_market_cap(cls, v):
@@ -86,7 +78,6 @@ class PriceData(BaseModel):
             return int(v)
         return v
 
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
 
 class LatestPrices(BaseModel):
     """Latest prices for all cryptocurrencies."""
@@ -103,19 +94,8 @@ class VolatilityMetrics(BaseModel):
     period_days: int
     data_points: int
     mean_price: float
-<<<<<<< HEAD
-    std_dev: float  # Period volatility (%)
-    annualized_volatility: Optional[float] = None  # Annualized volatility (%)
-    variance: float
-    coefficient_of_variation: float
-    var_95: float
-    min_price: float
-    max_price: float
-    price_range: float
-=======
     period_volatility: float  # Actual volatility for the period (%)
     annualized_volatility: float  # Annualized volatility (%)
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
 
 
 class SharpeMetrics(BaseModel):
@@ -128,10 +108,6 @@ class SharpeMetrics(BaseModel):
     annualized_return: float
     annualized_volatility: float
     sharpe_ratio: float
-<<<<<<< HEAD
-    sortino_ratio: float
-=======
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
     start_price: float
     end_price: float
 
@@ -150,22 +126,10 @@ class DrawdownMetrics(BaseModel):
     period_days: int
     data_points: int
     max_drawdown_pct: float
-    max_drawdown_value: float
-<<<<<<< HEAD
-    current_drawdown_pct: float
-    underwater_pct: float
-    peak_price: float
-    trough_price: float
-    current_price: float
-    peak_date: Optional[datetime] = None
-    trough_date: Optional[datetime] = None
-    drawdown_periods: List[DrawdownPeriod] = []
-=======
     peak_price: float
     trough_price: float
     peak_date: Optional[datetime] = None
     trough_date: Optional[datetime] = None
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
 
 
 class CorrelationPair(BaseModel):
@@ -181,12 +145,6 @@ class CorrelationMatrix(BaseModel):
 
     period_days: int
     correlations: List[CorrelationPair]
-<<<<<<< HEAD
-    diversification_score: float
-    highest_correlation: CorrelationPair
-    lowest_correlation: CorrelationPair
-=======
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
 
 
 class PnLSimulationResult(BaseModel):
@@ -197,11 +155,7 @@ class PnLSimulationResult(BaseModel):
     purchase_date: datetime
     purchase_price: float
     quantity: float
-<<<<<<< HEAD
-    sell_date: datetime
-=======
-    sell_date: Optional[datetime] = None  # ✅ FIX
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
+    sell_date: Optional[datetime] = None
     sell_price: float
     current_value: float
     pnl: float
@@ -247,8 +201,4 @@ class ErrorResponse(BaseModel):
 
     error: str
     detail: Optional[str] = None
-<<<<<<< HEAD
     timestamp: datetime = Field(default_factory=datetime.utcnow)
-=======
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1

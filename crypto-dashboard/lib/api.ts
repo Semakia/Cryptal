@@ -39,14 +39,8 @@ export interface VolatilityMetrics {
   period_days: number;
   data_points: number;
   mean_price: number;
-<<<<<<< HEAD
-  std_dev: number;
-  variance: number;
-  coefficient_of_variation: number;
-  var_95: number;
-=======
+  period_volatility: number;
   annualized_volatility: number;
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
   min_price: number;
   max_price: number;
   price_range: number;
@@ -56,18 +50,10 @@ export interface SharpeMetrics {
   coin_id: string;
   period_days: number;
   data_points: number;
-<<<<<<< HEAD
-  total_return: number;
-  annualized_return: number;
-  annualized_volatility: number;
-  sharpe_ratio: number;
-  sortino_ratio: number;
-=======
   total_return: number; // Actual return over the period (e.g., -9% over 30 days)
   annualized_return: number; // Hypothetical if trend continues (use total_return instead!)
   annualized_volatility: number; // Standard: volatility scaled to annual basis
   sharpe_ratio: number; // Based on actual returns, not annualized
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
   start_price: number;
   end_price: number;
 }
@@ -78,24 +64,10 @@ export interface DrawdownMetrics {
   data_points: number;
   max_drawdown_pct: number;
   max_drawdown_value: number;
-<<<<<<< HEAD
-  current_drawdown_pct: number;
-  underwater_pct: number;
-  peak_price: number;
-  trough_price: number;
-  current_price: number;
-  peak_date: string | null;
-  trough_date: string | null;
-  drawdown_periods: Array<{
-    start: string;
-    drawdown: number;
-  }>;
-=======
   peak_price: number;
   trough_price: number;
   peak_date: string | null;
   trough_date: string | null;
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
 }
 
 export interface CorrelationPair {
@@ -107,12 +79,6 @@ export interface CorrelationPair {
 export interface CorrelationMatrix {
   period_days: number;
   correlations: CorrelationPair[];
-<<<<<<< HEAD
-  diversification_score: number;
-  highest_correlation: CorrelationPair;
-  lowest_correlation: CorrelationPair;
-=======
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
 }
 
 // Simulation endpoints
@@ -182,17 +148,8 @@ export interface TransformedHistoricalPrices {
 
 export interface VolatilityMetric {
   crypto: string;
-<<<<<<< HEAD
-  std_deviation: number;
-  coefficient_of_variation: number;
-  var_95: number;
-=======
+  period_volatility: number;
   annualized_volatility: number;
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
-  price_range: {
-    min: number;
-    max: number;
-  };
   mean_price: number;
 }
 
@@ -203,18 +160,10 @@ export interface VolatilityResponse {
 
 export interface SharpeMetric {
   crypto: string;
-<<<<<<< HEAD
-  annualized_return: number;
-  annualized_volatility: number;
-  sharpe_ratio: number;
-  sortino_ratio: number;
-  total_return: number;
-=======
   annualized_return: number; // Hypothetical projection (misleading for short periods)
   annualized_volatility: number; // Standard annualized volatility
   sharpe_ratio: number; // Calculated using total_return (actual), not annualized
   total_return: number; // ACTUAL return over the period - use this for display!
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
 }
 
 export interface SharpeResponse {
@@ -226,23 +175,10 @@ export interface SharpeResponse {
 export interface DrawdownMetric {
   crypto: string;
   max_drawdown: number;
-<<<<<<< HEAD
-  current_drawdown: number;
-  time_underwater_pct: number;
-=======
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
   peak_date: string | null;
   peak_price: number;
   trough_date: string | null;
   trough_price: number;
-<<<<<<< HEAD
-  current_price: number;
-  drawdown_periods: Array<{
-    start: string;
-    drawdown: number;
-  }>;
-=======
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
 }
 
 export interface DrawdownResponse {
@@ -402,17 +338,8 @@ export const api = {
       period_days: period,
       metrics: response.map((m) => ({
         crypto: m.coin_id,
-<<<<<<< HEAD
-        std_deviation: m.std_dev,
-        coefficient_of_variation: m.coefficient_of_variation,
-        var_95: m.var_95,
-=======
+        period_volatility: m.period_volatility,
         annualized_volatility: m.annualized_volatility,
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
-        price_range: {
-          min: m.min_price,
-          max: m.max_price,
-        },
         mean_price: m.mean_price,
       })),
     };
@@ -435,10 +362,6 @@ export const api = {
         annualized_return: m.annualized_return,
         annualized_volatility: m.annualized_volatility,
         sharpe_ratio: m.sharpe_ratio,
-<<<<<<< HEAD
-        sortino_ratio: m.sortino_ratio,
-=======
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
         total_return: m.total_return,
       })),
     };
@@ -455,20 +378,10 @@ export const api = {
       metrics: response.map((m) => ({
         crypto: m.coin_id,
         max_drawdown: m.max_drawdown_pct,
-<<<<<<< HEAD
-        current_drawdown: m.current_drawdown_pct,
-        time_underwater_pct: m.underwater_pct,
-=======
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
         peak_date: m.peak_date,
         peak_price: m.peak_price,
         trough_date: m.trough_date,
         trough_price: m.trough_price,
-<<<<<<< HEAD
-        current_price: m.current_price,
-        drawdown_periods: m.drawdown_periods,
-=======
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
       })),
     };
   },
@@ -495,12 +408,9 @@ export const api = {
   ): Promise<PnLSimulationResult[]> {
     return fetchApi<PnLSimulationResult[]>(
       `/api/simulate/pnl/compare?amount=${amount}&purchase_date=${purchaseDate}`,
-<<<<<<< HEAD
-=======
       {
-        method: "POST"
-      }
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
+        method: "POST",
+      },
     );
   },
 

@@ -1,0 +1,29 @@
+# Contrôle de version
+.git
+.gitignore
+
+# Python
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+.venv/
+venv/
+
+# Node / Next.js (réinstallés au build ; jamais copier le local)
+**/node_modules/
+crypto-dashboard/.next/
+crypto-dashboard/out/
+
+# Logs runtime Airflow/infra : symlinks cassés sous Windows, inutiles en image
+# (Airflow écrit dans .config/iac/dev/kafka/logs/ à cause du base-dir du `include`)
+.config/**/logs/
+**/logs/
+
+# Fichiers d'environnement (secrets) : fournis au runtime via env_file, pas copiés
+**/.env
+**/.env.*
+!**/.env.example
+
+# Divers
+*.log
+.DS_Store

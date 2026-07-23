@@ -14,24 +14,7 @@ import { formatNumber, CRYPTO_NAMES, CRYPTO_SYMBOLS } from "@/lib/utils";
 import { useState, useMemo } from "react";
 import { Shield, Link2, Unlink } from "lucide-react";
 
-const CRYPTOS = ["bitcoin", "ethereum", "binancecoin", "solana", "hyperliquid"];
-
 function getCorrelationColor(value: number): string {
-<<<<<<< HEAD
-  if (value >= 0.7) return "bg-red-500";
-  if (value >= 0.3) return "bg-red-300";
-  if (value >= -0.3) return "bg-gray-200 dark:bg-gray-700";
-  if (value >= -0.7) return "bg-blue-300";
-  return "bg-blue-500";
-}
-
-function getCorrelationText(value: number): string {
-  const abs = Math.abs(value);
-  const direction = value >= 0 ? "positive" : "negative";
-  if (abs >= 0.7) return `Strong ${direction}`;
-  if (abs >= 0.3) return `Moderate ${direction}`;
-  return "Weak";
-=======
   // Adjusted color scale for crypto (most correlations are 0.8-1.0)
   // This provides better visual differentiation in the typical crypto range
   if (value >= 0.95) return "bg-red-600"; // Very high - poor diversification
@@ -94,7 +77,6 @@ function getDiversificationRecommendation(
       ],
     };
   }
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
 }
 
 export function CorrelationHeatmap() {
@@ -104,31 +86,41 @@ export function CorrelationHeatmap() {
     col: number;
   } | null>(null);
 
+  // Liste dynamique : les cryptos réellement présentes dans la réponse de
+  // corrélation (union des paires) — plus de liste codée en dur.
+  const cryptos = useMemo(() => {
+    if (!data) return [];
+    const set = new Set<string>();
+    data.correlations.forEach((c) => {
+      set.add(c.crypto_1);
+      set.add(c.crypto_2);
+    });
+    return Array.from(set).sort();
+  }, [data]);
+
   const matrix = useMemo(() => {
     if (!data) return [];
 
-    const result: (number | null)[][] = CRYPTOS.map(() =>
-      CRYPTOS.map(() => null),
+    const result: (number | null)[][] = cryptos.map(() =>
+      cryptos.map(() => null),
     );
 
     data.correlations.forEach((c) => {
-      const i = CRYPTOS.indexOf(c.crypto_1);
-      const j = CRYPTOS.indexOf(c.crypto_2);
+      const i = cryptos.indexOf(c.crypto_1);
+      const j = cryptos.indexOf(c.crypto_2);
       if (i !== -1 && j !== -1) {
         result[i][j] = c.correlation;
         result[j][i] = c.correlation;
       }
     });
 
-    CRYPTOS.forEach((_, i) => {
+    cryptos.forEach((_, i) => {
       result[i][i] = 1;
     });
 
     return result;
-  }, [data]);
+  }, [data, cryptos]);
 
-<<<<<<< HEAD
-=======
   // Calculate diversification metrics from correlation data
   const diversificationMetrics = useMemo(() => {
     if (!data?.correlations || data.correlations.length === 0) {
@@ -176,15 +168,10 @@ export function CorrelationHeatmap() {
     };
   }, [data]);
 
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
   if (isLoading) return <ChartSkeleton />;
   if (error)
     return <ErrorState message={error.message} onRetry={() => refetch()} />;
 
-<<<<<<< HEAD
-  return (
-    <div className="space-y-6">
-=======
   const recommendation = getDiversificationRecommendation(
     diversificationMetrics.diversificationScore,
     diversificationMetrics.lowestCorrelation,
@@ -222,7 +209,6 @@ export function CorrelationHeatmap() {
           </CardContent>
         </Card>
       )}
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
       <div className="grid gap-4 sm:grid-cols-3">
         <Card>
           <CardContent className="pt-6">
@@ -231,11 +217,7 @@ export function CorrelationHeatmap() {
               <span className="text-sm">Diversification Score</span>
             </div>
             <span className="text-3xl font-bold text-primary">
-<<<<<<< HEAD
-              {formatNumber(data?.diversification_score || 0, 0)}%
-=======
               {diversificationMetrics.diversificationScore}%
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
             </span>
             <p className="text-xs text-muted-foreground mt-1">
               Higher = better diversification
@@ -249,16 +231,6 @@ export function CorrelationHeatmap() {
               <Unlink className="w-4 h-4" />
               <span className="text-sm">Best Pair</span>
             </div>
-<<<<<<< HEAD
-            {data?.lowest_correlation && (
-              <>
-                <span className="text-lg font-bold">
-                  {CRYPTO_SYMBOLS[data.lowest_correlation.crypto_1]} /{" "}
-                  {CRYPTO_SYMBOLS[data.lowest_correlation.crypto_2]}
-                </span>
-                <p className="text-sm text-blue-500 font-mono">
-                  {formatNumber(data.lowest_correlation.correlation, 3)}
-=======
             {diversificationMetrics.lowestCorrelation && (
               <>
                 <span className="text-lg font-bold">
@@ -279,7 +251,6 @@ export function CorrelationHeatmap() {
                     diversificationMetrics.lowestCorrelation.correlation,
                     3,
                   )}
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
                 </p>
               </>
             )}
@@ -292,16 +263,6 @@ export function CorrelationHeatmap() {
               <Link2 className="w-4 h-4" />
               <span className="text-sm">Most Correlated</span>
             </div>
-<<<<<<< HEAD
-            {data?.highest_correlation && (
-              <>
-                <span className="text-lg font-bold">
-                  {CRYPTO_SYMBOLS[data.highest_correlation.crypto_1]} /{" "}
-                  {CRYPTO_SYMBOLS[data.highest_correlation.crypto_2]}
-                </span>
-                <p className="text-sm text-red-500 font-mono">
-                  {formatNumber(data.highest_correlation.correlation, 3)}
-=======
             {diversificationMetrics.highestCorrelation && (
               <>
                 <span className="text-lg font-bold">
@@ -322,7 +283,6 @@ export function CorrelationHeatmap() {
                     diversificationMetrics.highestCorrelation.correlation,
                     3,
                   )}
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
                 </p>
               </>
             )}
@@ -334,13 +294,8 @@ export function CorrelationHeatmap() {
         <CardHeader>
           <CardTitle>Correlation Matrix</CardTitle>
           <CardDescription>
-<<<<<<< HEAD
-            Price correlation between cryptocurrencies (Blue = negative, Red =
-            positive)
-=======
             Price correlation between cryptocurrencies (Green/Blue = better
             diversification, Red = moves together)
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -348,12 +303,12 @@ export function CorrelationHeatmap() {
             <div className="inline-block min-w-full">
               <div className="flex">
                 <div className="w-20" />
-                {CRYPTOS.map((crypto) => (
+                {cryptos.map((crypto) => (
                   <div
                     key={crypto}
                     className="w-16 text-center text-xs font-medium text-muted-foreground py-2"
                   >
-                    {CRYPTO_SYMBOLS[crypto]}
+                    {CRYPTO_SYMBOLS[crypto] || crypto}
                   </div>
                 ))}
               </div>
@@ -361,7 +316,7 @@ export function CorrelationHeatmap() {
               {matrix.map((row, i) => (
                 <div key={i} className="flex">
                   <div className="w-20 flex items-center text-xs font-medium text-muted-foreground pr-2">
-                    {CRYPTO_SYMBOLS[CRYPTOS[i]]}
+                    {CRYPTO_SYMBOLS[cryptos[i]] || cryptos[i]}
                   </div>
                   {row.map((value, j) => {
                     const isHovered =
@@ -397,8 +352,8 @@ export function CorrelationHeatmap() {
                           i !== j && (
                             <div className="absolute z-20 bottom-full left-1/2 -translate-x-1/2 mb-2 bg-popover border border-border rounded-lg p-3 shadow-lg whitespace-nowrap">
                               <p className="font-medium text-sm">
-                                {CRYPTO_NAMES[CRYPTOS[i]]} -{" "}
-                                {CRYPTO_NAMES[CRYPTOS[j]]}
+                                {CRYPTO_NAMES[cryptos[i]] || cryptos[i]} -{" "}
+                                {CRYPTO_NAMES[cryptos[j]] || cryptos[j]}
                               </p>
                               <p className="text-lg font-mono font-bold">
                                 {formatNumber(value || 0, 3)}
@@ -416,21 +371,6 @@ export function CorrelationHeatmap() {
             </div>
           </div>
 
-<<<<<<< HEAD
-          <div className="flex items-center justify-center gap-4 mt-6 text-xs">
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-blue-500 rounded" />
-              <span>Strong Negative</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-gray-300 dark:bg-gray-600 rounded" />
-              <span>Neutral</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-red-500 rounded" />
-              <span>Strong Positive</span>
-            </div>
-=======
           <div className="flex flex-wrap items-center justify-center gap-3 mt-6 text-xs">
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 bg-blue-500 rounded" />
@@ -480,7 +420,6 @@ export function CorrelationHeatmap() {
                 diversification
               </li>
             </ul>
->>>>>>> abf4febebab2e997586d0832b94edec22db5c0c1
           </div>
         </CardContent>
       </Card>

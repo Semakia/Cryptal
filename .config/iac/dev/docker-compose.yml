@@ -6,6 +6,7 @@ include:
     - ./postgres/docker-compose.yml
     - ./pgadmin/docker-compose.yml
     - ./spark/docker-compose.yml
+    - ./airflow/docker-compose.yml
 
     env_file:
       - .env.dev
@@ -66,5 +67,3 @@ networks:
   crypto-viz-datawarehouse-network:
     driver: bridge
     name: crypto-viz-datawarehouse-network
-
-      - ../../../src/.env
