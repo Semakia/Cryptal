@@ -18,6 +18,12 @@ class DrawdownCalculator:
     - Current drawdown
     - Recovery time
     - Peak and trough information
+
+    Source de donnees : table crypto_prices_series (Silver layer)
+    Cette table contient deja des prix agregees par heure :
+    - coin_id : identifiant de la crypto
+    - time_bucket : timestamp tronque a l'heure
+    - price_usd : prix moyen sur le bucket
     """
 
     def __init__(self, db_config: Dict[str, str]):

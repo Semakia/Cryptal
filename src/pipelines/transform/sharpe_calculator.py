@@ -56,7 +56,7 @@ class SharpeCalculator:
         Args:
             coin_id: Cryptocurrency identifier
             days: Analysis period
-
+            
         Returns:
             Return metrics or None
         """
@@ -144,7 +144,7 @@ class SharpeCalculator:
         Args:
             coin_id: Cryptocurrency identifier
             days: Analysis period
-
+            
         Returns:
             Annualized volatility (%) or None
         """
@@ -194,12 +194,12 @@ class SharpeCalculator:
     ) -> Optional[Dict]:
         """
         Calculate Sharpe Ratio for a cryptocurrency.
-
+        
         Args:
             coin_id: Cryptocurrency identifier
             days: Analysis period
             risk_free_rate: Annual risk-free rate (overrides default if provided)
-
+            
         Returns:
             Sharpe ratio and related metrics or None
         """

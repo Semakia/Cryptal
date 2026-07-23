@@ -67,7 +67,7 @@ class VolatilityCalculator:
         Args:
             coin_id: Cryptocurrency identifier
             days: Number of days to look back (default: 30)
-
+            
         Returns:
             Dictionary with volatility metrics or None
         """
@@ -172,11 +172,11 @@ class VolatilityCalculator:
     ) -> List[Dict]:
         """
         Compare volatility across multiple cryptocurrencies.
-
+        
         Args:
             coin_ids: List of cryptocurrency identifiers
             days: Number of days to analyze
-
+            
         Returns:
             List of volatility metrics, sorted by risk (low to high)
         """
@@ -196,12 +196,12 @@ class VolatilityCalculator:
     ) -> Optional[Dict]:
         """
         Calculate risk-adjusted return metrics.
-
+        
         Args:
             coin_id: Cryptocurrency identifier
             investment_amount: Amount to invest
             days: Analysis period
-
+            
         Returns:
             Risk-adjusted metrics
         """
