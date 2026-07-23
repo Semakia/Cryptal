@@ -139,10 +139,12 @@ jobs:
           docker run --rm \
             -v /var/run/docker.sock:/var/run/docker.sock \
             -v "${{ github.workspace }}/.trivycache:/root/.cache" \
+            -v "${{ github.workspace }}/.trivyignore:/.trivyignore:ro" \
             aquasec/trivy:0.58.1 image \
             --scanners vuln \
             --severity CRITICAL \
             --ignore-unfixed \
+            --ignorefile /.trivyignore \
             --exit-code 1 \
             --no-progress \
             cryptoviz-${{ matrix.name }}:scan
