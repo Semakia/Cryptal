@@ -84,7 +84,21 @@ async def get_prices(
     """
     cursor = db.get_cursor()
     try:
-        cutoff_date = datetime.utcnow() - timedelta(days=days)
+        # Ancre la fenêtre sur la donnée la plus récente disponible (et non NOW())
+        # pour rester fonctionnel sur des données historiques/démo plus anciennes.
+        if crypto:
+            cursor.execute(
+                "SELECT MAX(timestamp) AS latest FROM crypto_prices "
+                "WHERE coin_id = %s",
+                (crypto,),
+            )
+        else:
+            cursor.execute("SELECT MAX(timestamp) AS latest FROM crypto_prices")
+        latest_row = cursor.fetchone()
+        latest = latest_row["latest"] if latest_row else None
+        if latest is None:
+            return []
+        cutoff_date = latest - timedelta(days=days)
 
         if crypto:
             query = """
@@ -183,7 +197,22 @@ async def get_crypto_prices(
     """
     cursor = db.get_cursor()
     try:
-        cutoff_date = datetime.utcnow() - timedelta(days=days)
+        # Ancre la fenêtre sur la donnée la plus récente disponible pour ce coin
+        # (et non sur NOW()) : le graphe fonctionne aussi bien en prod (données
+        # live) que sur des données historiques/démo plus anciennes.
+        cursor.execute(
+            "SELECT MAX(timestamp) AS latest FROM crypto_prices "
+            "WHERE coin_id = %s",
+            (crypto_id,),
+        )
+        latest_row = cursor.fetchone()
+        latest = latest_row["latest"] if latest_row else None
+        if latest is None:
+            raise HTTPException(
+                status_code=404,
+                detail=f"No data found for cryptocurrency '{crypto_id}'",
+            )
+        cutoff_date = latest - timedelta(days=days)
 
         # Determine aggregation interval based on period
         if days <= 1:
