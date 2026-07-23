@@ -122,7 +122,7 @@ async def root():
         API information and available endpoints.
     """
     return {
-        "name": "Crypto Viz API",
+        "name": "CrypTal API",
         "version": "1.0.0",
         "status": "operational",
         "timestamp": datetime.utcnow().isoformat(),

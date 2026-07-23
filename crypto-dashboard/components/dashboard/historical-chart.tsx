@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useHistoricalPrices } from "@/hooks/use-crypto-data";
+import { useHistoricalPrices, useCryptos } from "@/hooks/use-crypto-data";
 import {
   Card,
   CardContent,
@@ -36,12 +36,13 @@ import {
 } from "recharts";
 import { useAppState } from "@/lib/store";
 
-const CRYPTOS = ["bitcoin", "ethereum", "binancecoin", "solana", "hyperliquid"];
-
 export function HistoricalChart() {
   const [selectedCrypto, setSelectedCrypto] = useState("bitcoin");
   const { data, isLoading, error, refetch } =
     useHistoricalPrices(selectedCrypto);
+  // Liste dynamique des cryptos disponibles en base (endpoint /api/data/cryptos).
+  const { data: cryptos } = useCryptos();
+  const availableCryptos = (cryptos ?? []).map((c) => c.coin_id);
   const { period } = useAppState();
   const color = CRYPTO_COLORS[selectedCrypto] || "#888";
 
@@ -70,9 +71,9 @@ export function HistoricalChart() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {CRYPTOS.map((crypto) => (
+            {availableCryptos.map((crypto) => (
               <SelectItem key={crypto} value={crypto}>
-                {CRYPTO_NAMES[crypto]}
+                {CRYPTO_NAMES[crypto] || crypto}
               </SelectItem>
             ))}
           </SelectContent>
