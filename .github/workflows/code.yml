@@ -1,0 +1,150 @@
+name: "1 · Code"
+
+# Boucle DevOps — étape CODE (inclut le volet sécurité / DevSecOps).
+# Un job = une préoccupation : lint, SAST, secrets, dépendances, scan d'image.
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 6 * * 1" # re-scan sécurité hebdomadaire (lundi 06:00 UTC)
+
+permissions:
+  contents: read
+
+concurrency:
+  group: code-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: "code: lint"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Échouer si des marqueurs de merge subsistent
+        run: |
+          if grep -rnE '^(<<<<<<<|>>>>>>>)' \
+              --include='*.py' --include='*.ts' --include='*.tsx' \
+              --include='*.js' --include='*.jsx' --include='*.yml' \
+              --include='*.yaml' --include='*.json' \
+              --exclude-dir=node_modules --exclude-dir=.git .; then
+            echo "::error::Marqueurs de conflit de merge détectés"
+            exit 1
+          fi
+          echo "OK : aucun marqueur de conflit"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install "ruff==0.8.4"
+      - name: Ruff — erreurs réelles (bloquant)
+        run: ruff check --select E9,F63,F7,F82 src
+      - name: Ruff — style complet (rapport seulement)
+        run: ruff check src
+        continue-on-error: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Activer pnpm 10
+        run: corepack enable && corepack prepare pnpm@10 --activate
+      - name: Installer les dépendances front
+        working-directory: crypto-dashboard
+        run: pnpm install --frozen-lockfile
+      - name: ESLint (rapport seulement)
+        working-directory: crypto-dashboard
+        run: pnpm lint
+        continue-on-error: true
+
+  sast-scan:
+    name: "code: sast-scan"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install "bandit==1.8.0" "semgrep==1.97.0"
+      - name: Bandit — bloque sur sévérité HIGH
+        run: bandit -r src -lll -x src/test,src/jars
+      - name: Semgrep — règles auto (rapport seulement)
+        run: semgrep scan --config auto --error src
+        continue-on-error: true
+
+  secret-scan:
+    name: "code: secret-scan"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # scanne tout l'historique
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  deps-scan:
+    name: "code: deps-scan"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: pip-audit (Python)
+        run: |
+          pip install pip-audit
+          pip-audit -r src/api/requirements.txt
+        continue-on-error: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: pnpm audit (frontend)
+        working-directory: crypto-dashboard
+        run: |
+          corepack enable && corepack prepare pnpm@10 --activate
+          pnpm audit --audit-level high
+        continue-on-error: true
+
+  trivy-scan:
+    name: "code: trivy-scan (${{ matrix.name }})"
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: api
+            dockerfile: src/api/Dockerfile
+          - name: frontend
+            dockerfile: crypto-dashboard/Dockerfile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build image ${{ matrix.name }}
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          push: false
+          load: true
+          tags: cryptoviz-${{ matrix.name }}:scan
+          cache-from: type=gha
+      - name: Trivy — bloque sur CRITICAL
+        # Image Docker officielle plutôt que trivy-action/setup-trivy (dont le
+        # script d'install télécharge le binaire via l'API GitHub -> flaky).
+        # Trivy accède à l'image locale via le socket Docker monté.
+        run: |
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v "${{ github.workspace }}/.trivycache:/root/.cache" \
+            -v "${{ github.workspace }}/.trivyignore:/.trivyignore:ro" \
+            aquasec/trivy:0.58.1 image \
+            --scanners vuln \
+            --severity CRITICAL \
+            --ignore-unfixed \
+            --ignorefile /.trivyignore \
+            --exit-code 1 \
+            --no-progress \
+            cryptoviz-${{ matrix.name }}:scan

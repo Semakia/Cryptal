@@ -1,0 +1,48 @@
+name: "6 · Monitor"
+
+# Boucle DevOps — étape MONITOR.
+# Health checks post-déploiement. Se déclenche automatiquement à la fin d'un
+# déploiement réussi, ou manuellement.
+#
+# Variables : APP_API_URL (ex: https://api.exemple.com), APP_FRONTEND_URL
+on:
+  workflow_dispatch: {}
+  workflow_run:
+    workflows: ["5 · Deploy"]
+    types: [completed]
+
+permissions:
+  contents: read
+
+jobs:
+  healthchecks:
+    name: "monitor: healthchecks"
+    runs-on: ubuntu-latest
+    # Uniquement si le déploiement a réussi (ou lancement manuel).
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: Vérifier l'API (/health)
+        run: |
+          url="${{ vars.APP_API_URL }}"
+          if [ -z "$url" ]; then
+            echo "::warning::APP_API_URL non défini — health check API ignoré"
+            exit 0
+          fi
+          for i in $(seq 1 5); do
+            code=$(curl -s -o /dev/null -w "%{http_code}" "$url/health" || echo 000)
+            echo "Tentative $i : HTTP $code"
+            [ "$code" = "200" ] && exit 0
+            sleep 10
+          done
+          echo "::error::API non saine après 5 tentatives"
+          exit 1
+      - name: Vérifier le frontend
+        run: |
+          url="${{ vars.APP_FRONTEND_URL }}"
+          if [ -z "$url" ]; then
+            echo "::warning::APP_FRONTEND_URL non défini — health check front ignoré"
+            exit 0
+          fi
+          code=$(curl -s -o /dev/null -w "%{http_code}" "$url" || echo 000)
+          echo "Frontend : HTTP $code"
+          [ "$code" = "200" ] || { echo "::error::Frontend injoignable"; exit 1; }

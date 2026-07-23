@@ -1,0 +1,19 @@
+# Config ruff pour la CI.
+# Le job "gate" ne bloque que sur les vraies erreurs (syntaxe, noms non définis,
+# etc. via --select en ligne de commande) ; ce fichier sert au rapport de style
+# complet (report-only) et exclut le code généré / binaire.
+target-version = "py311"
+line-length = 100
+exclude = [
+    "**/__pycache__",
+    "src/jars",
+    ".config",
+]
+
+[lint]
+select = ["E", "F", "W", "I"]
+ignore = [
+    "E501",  # ligne trop longue : bruit de style pré-existant
+    "E402",  # import pas en haut : dû aux sys.path.insert dans les routers API
+    "E741",  # nom de variable ambigu
+]

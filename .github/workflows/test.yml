@@ -1,0 +1,40 @@
+name: "2 · Test"
+
+# Boucle DevOps — étape TEST.
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pytest:
+    name: "test: pytest"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Installer les dépendances API + pytest
+        run: |
+          pip install -r src/api/requirements.txt
+          pip install pytest
+      - name: Lancer pytest (tolère l'absence de tests)
+        run: |
+          set +e
+          pytest -q src/test
+          code=$?
+          # exit 5 = aucun test collecté -> on ne bloque pas (à compléter)
+          if [ "$code" -eq 5 ]; then
+            echo "::warning::Aucun test collecté — pense à ajouter des tests dans src/test"
+            exit 0
+          fi
+          exit $code

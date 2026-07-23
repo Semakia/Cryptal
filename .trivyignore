@@ -1,0 +1,11 @@
+# Trivy — CVE acceptées (revue périodique via la date d'expiration).
+# Format : un ID de vulnérabilité par ligne. `exp:AAAA-MM-JJ` = date de réévaluation.
+#
+# CVE-2026-59873 — node-tar : DoS via une archive gzip forgée.
+#   Impact réel : nul dans notre contexte. `tar` n'est PAS une dépendance de
+#   l'application ; il n'existe que sous forme *vendored* dans l'outillage de
+#   build (npm interne de l'image node:22-alpine, et next/dist/compiled/tar).
+#   Le serveur frontend Next n'extrait jamais d'archive tar non fiable au
+#   runtime. Non corrigeable sans que npm / Next re-vendorent tar >= 7.5.19.
+#   À réévaluer quand une image de base / version de Next patchée sera dispo.
+CVE-2026-59873 exp:2026-10-01
