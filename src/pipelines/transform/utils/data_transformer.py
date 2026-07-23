@@ -1,4 +1,4 @@
-from pyspark.sql import SparkSession
+from pyspark.sql import SparkSession, DataFrame
 from pyspark.sql import functions as F
 from pyspark.sql.window import Window
 import pandas as pd
@@ -11,9 +11,9 @@ class CryptoDataTransformer:
 
     def calculate_volatility(
         self,
-        price_series_df: "pyspark.sql.DataFrame",
+        price_series_df: DataFrame,
         granularity: str = "daily"
-    ) -> "pyspark.sql.DataFrame":
+    ) -> DataFrame:
         """
         Calcule la volatilité (stddev) sur crypto_prices_series.
         granularity: "daily" → fenêtre de 24h, "hourly" → fenêtre de 1h
@@ -40,9 +40,9 @@ class CryptoDataTransformer:
 
     def calculate_sma(
         self,
-        price_series_df: "pyspark.sql.DataFrame",
+        price_series_df: DataFrame,
         window_size: int = 20
-    ) -> "pyspark.sql.DataFrame":
+    ) -> DataFrame:
         """
         Calcule la SMA (Simple Moving Average) sur crypto_prices_series.
         Args:
@@ -63,9 +63,9 @@ class CryptoDataTransformer:
 
     def calculate_rsi(
         self,
-        price_series_df: "pyspark.sql.DataFrame",
+        price_series_df: DataFrame,
         window_size: int = 14
-    ) -> "pyspark.sql.DataFrame":
+    ) -> DataFrame:
         """
         Calcule le RSI sur crypto_prices_series.
         Args:
@@ -99,9 +99,9 @@ class CryptoDataTransformer:
 
     def calculate_correlation(
         self,
-        price_series_df: "pyspark.sql.DataFrame",
+        price_series_df: DataFrame,
         granularity: str = "daily"
-    ) -> "pyspark.sql.DataFrame":
+    ) -> DataFrame:
         """
         Calcule la corrélation entre paires de cryptos sur crypto_prices_series.
         Args:
@@ -143,8 +143,8 @@ class CryptoDataTransformer:
 
     def transform(
         self,
-        input_dataframe: "pyspark.sql.DataFrame"
-    ) -> "pyspark.sql.DataFrame":
+        input_dataframe: DataFrame
+    ) -> DataFrame:
         """
         Pipeline complet : price_series + volatilité + SMA + RSI.
         """

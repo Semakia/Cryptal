@@ -1,0 +1,96 @@
+name: CI
+
+# Portail qualité : marqueurs de conflit, lint & tests Python, lint & build front.
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  conflict-markers:
+    name: Marqueurs de conflit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Échouer si des marqueurs de merge subsistent
+        run: |
+          if grep -rnE '^(<<<<<<<|>>>>>>>)' \
+              --include='*.py' --include='*.ts' --include='*.tsx' \
+              --include='*.js' --include='*.jsx' --include='*.yml' \
+              --include='*.yaml' --include='*.json' \
+              --exclude-dir=node_modules --exclude-dir=.git .; then
+            echo "::error::Marqueurs de conflit de merge détectés"
+            exit 1
+          fi
+          echo "OK : aucun marqueur de conflit"
+
+  python-lint:
+    name: Lint Python (ruff)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install "ruff==0.8.4"
+      - name: Ruff — erreurs réelles (bloquant)
+        run: ruff check --select E9,F63,F7,F82 src
+      - name: Ruff — style complet (rapport seulement)
+        run: ruff check src
+        continue-on-error: true
+
+  python-test:
+    name: Tests Python (pytest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Installer les dépendances API + pytest
+        run: |
+          pip install -r src/api/requirements.txt
+          pip install pytest
+      - name: Lancer pytest (tolère l'absence de tests)
+        run: |
+          set +e
+          pytest -q src/test
+          code=$?
+          # exit 5 = aucun test collecté -> on ne bloque pas (à compléter)
+          if [ "$code" -eq 5 ]; then
+            echo "::warning::Aucun test collecté — pense à ajouter des tests dans src/test"
+            exit 0
+          fi
+          exit $code
+
+  frontend:
+    name: Frontend (lint + build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: crypto-dashboard
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Activer pnpm 10
+        run: corepack enable && corepack prepare pnpm@10 --activate
+      - name: Installer les dépendances
+        run: pnpm install --frozen-lockfile
+      - name: Lint (rapport seulement)
+        run: pnpm lint
+        continue-on-error: true
+      - name: Build (type-check + next build)
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:8000
+          NEXT_TELEMETRY_DISABLED: "1"
+        run: pnpm build
