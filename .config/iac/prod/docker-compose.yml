@@ -1,0 +1,61 @@
+# Stack de production (VPS) — API FastAPI derrière Caddy (HTTPS automatique).
+# Le frontend n'est PAS ici : il est hébergé sur Vercel.
+#
+# Prérequis sur le serveur, dans ce dossier (.config/iac/prod) :
+#   - un fichier .env.prod (NON versionné) contenant les identifiants BDD, ex. :
+#       BRONZE_DB_HOST=... BRONZE_DB_NAME=... BRONZE_DB_USER=... BRONZE_DB_PASSWORD=...
+#       SILVER_DB_HOST=... GOLD_DB_HOST=... etc.
+#       CORS_ORIGINS=https://<ton-projet>.vercel.app
+#       API_DOMAIN=api.91.134.132.149.sslip.io
+#
+# Déploiement (fait par le job "5 · Deploy") :
+#   docker compose -f .config/iac/prod/docker-compose.yml pull
+#   docker compose -f .config/iac/prod/docker-compose.yml up -d
+
+services:
+  api:
+    image: ghcr.io/semakia/t-data-901-crypto_viz/api:latest
+    container_name: cryptoviz-api
+    restart: unless-stopped
+    env_file:
+      - .env.prod
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - web
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: cryptoviz-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80" # requis pour le challenge HTTP-01 de Let's Encrypt
+      - "443:443"
+    environment:
+      # Domaine public de l'API. sslip.io résout <ip>.sslip.io vers l'IP,
+      # ce qui permet d'obtenir un certificat Let's Encrypt sans acheter de domaine.
+      API_DOMAIN: ${API_DOMAIN:?definir API_DOMAIN dans .env.prod}
+    env_file:
+      - .env.prod
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data # certificats — à persister absolument
+      - caddy_config:/config
+    depends_on:
+      - api
+    networks:
+      - web
+
+volumes:
+  caddy_data:
+  caddy_config:
+
+networks:
+  web:
+    driver: bridge

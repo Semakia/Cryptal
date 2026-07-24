@@ -37,10 +37,19 @@ jobs:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
+          # Secrets passés par variables d'environnement plutôt qu'interpolés
+          # dans le script (évite toute fuite dans les logs).
+          envs: GHCR_TOKEN,GHCR_USER,COMPOSE
           script: |
             set -e
-            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
             cd ${{ vars.DEPLOY_PATH || '~/cryptoviz' }}
-            docker compose -f docker-compose.prod.yml pull
-            docker compose -f docker-compose.prod.yml up -d --remove-orphans
+            # Récupère les éventuels changements de compose / Caddyfile
+            git pull --ff-only
+            docker compose -f "$COMPOSE" pull
+            docker compose -f "$COMPOSE" up -d --remove-orphans
             docker image prune -f
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
+          COMPOSE: .config/iac/prod/docker-compose.yml

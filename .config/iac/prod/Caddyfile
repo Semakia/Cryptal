@@ -1,0 +1,18 @@
+# Caddy — reverse proxy HTTPS devant l'API.
+# Caddy obtient et renouvelle automatiquement un certificat Let's Encrypt
+# pour {$API_DOMAIN} (challenge HTTP-01 sur le port 80).
+
+{$API_DOMAIN} {
+	encode gzip
+
+	# Journalisation (utile pour l'étape MONITOR)
+	log {
+		output stdout
+		format console
+	}
+
+	reverse_proxy api:8000 {
+		health_uri /health
+		health_interval 30s
+	}
+}
