@@ -37,10 +37,10 @@ services:
     ports:
       - "80:80" # requis pour le challenge HTTP-01 de Let's Encrypt
       - "443:443"
-    environment:
-      # Domaine public de l'API. sslip.io résout <ip>.sslip.io vers l'IP,
-      # ce qui permet d'obtenir un certificat Let's Encrypt sans acheter de domaine.
-      API_DOMAIN: ${API_DOMAIN:?definir API_DOMAIN dans .env.prod}
+    # API_DOMAIN est injecté dans le conteneur via .env.prod ; le Caddyfile le
+    # lit avec {$API_DOMAIN}. (Pas d'interpolation ${...} au niveau compose :
+    # elle ne lirait pas env_file, seulement un fichier .env / le shell.)
+    # sslip.io résout <ip>.sslip.io vers l'IP -> certificat Let's Encrypt sans domaine.
     env_file:
       - .env.prod
     volumes:
