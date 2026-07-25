@@ -18,6 +18,7 @@ Interactive docs available at:
     - ReDoc: http://localhost:8000/redoc
 """
 
+import os
 from datetime import datetime
 from pathlib import Path
 
@@ -47,16 +48,21 @@ app = FastAPI(
 # CORS Configuration
 # ============================================================================
 
-# Configure CORS to allow frontend access
+# Origines autorisées, pilotées par la variable d'env CORS_ORIGINS
+# (liste séparée par des virgules). En prod : y mettre l'URL du frontend Vercel,
+# ex. CORS_ORIGINS="https://cryptal.vercel.app".
+_default_origins = "http://localhost:3000,http://localhost:5173,http://localhost:8080"
+_cors_origins = [
+    o.strip() for o in os.getenv("CORS_ORIGINS", _default_origins).split(",") if o.strip()
+]
+# "*" et allow_credentials=True sont incompatibles (rejeté par le navigateur) :
+# si on autorise toutes les origines, on désactive les credentials pour rester valide.
+_allow_all = "*" in _cors_origins
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",  # React default port
-        "http://localhost:5173",  # Vite default port
-        "http://localhost:8080",  # Alternative frontend port
-        "*",  # Allow all origins (use with caution in production)
-    ],
-    allow_credentials=True,
+    allow_origins=["*"] if _allow_all else _cors_origins,
+    allow_credentials=not _allow_all,
     allow_methods=["*"],  # Allow all HTTP methods
     allow_headers=["*"],  # Allow all headers
 )
