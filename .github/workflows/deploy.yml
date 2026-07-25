@@ -39,13 +39,16 @@ jobs:
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           # Secrets passés par variables d'environnement plutôt qu'interpolés
           # dans le script (évite toute fuite dans les logs).
-          envs: GHCR_TOKEN,GHCR_USER,COMPOSE
+          envs: GHCR_TOKEN,GHCR_USER,COMPOSE,DEPLOY_REF
           script: |
             set -e
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
             cd ${{ vars.DEPLOY_PATH || '~/cryptoviz' }}
-            # Récupère les éventuels changements de compose / Caddyfile
-            git pull --ff-only
+            # Aligne DUR le checkout sur la branche déployée : robuste même si le
+            # dépôt du serveur est en HEAD détaché ou sur une autre branche
+            # locale (cas où `git pull --ff-only` ne fast-forward pas).
+            git fetch origin --prune
+            git checkout -f -B "$DEPLOY_REF" "origin/$DEPLOY_REF"
             docker compose -f "$COMPOSE" pull
             docker compose -f "$COMPOSE" up -d --remove-orphans
             docker image prune -f
@@ -53,3 +56,4 @@ jobs:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GHCR_USER: ${{ github.actor }}
           COMPOSE: .config/iac/prod/docker-compose.yml
+          DEPLOY_REF: ${{ github.ref_name }}
