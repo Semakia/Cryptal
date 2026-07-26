@@ -1,16 +1,19 @@
-# Stack de production (VPS) — API FastAPI derrière Caddy (HTTPS automatique).
-# Le frontend n'est PAS ici : il est hébergé sur Vercel.
+# Stack de production (VPS) — API FastAPI seule.
+# Le frontend est sur Vercel. Le HTTPS est assuré par le Caddy DÉJÀ présent sur
+# le VPS (projet « homepedia »), qui possède les ports 80/443 : on ne lance donc
+# PAS de second reverse proxy. Notre API rejoint le réseau de ce Caddy, et un
+# bloc de site est ajouté à SON Caddyfile pour proxy vers cryptoviz-api:8000.
+# (cf. .config/iac/prod/README.md)
 #
 # Prérequis sur le serveur, dans ce dossier (.config/iac/prod) :
-#   - un fichier .env.prod (NON versionné) contenant les identifiants BDD, ex. :
-#       BRONZE_DB_HOST=... BRONZE_DB_NAME=... BRONZE_DB_USER=... BRONZE_DB_PASSWORD=...
-#       SILVER_DB_HOST=... GOLD_DB_HOST=... etc.
-#       CORS_ORIGINS=https://<ton-projet>.vercel.app
-#       API_DOMAIN=api.91.134.132.149.sslip.io
+#   - un fichier .env.prod (NON versionné) : identifiants BDD + CORS_ORIGINS
+#       CORS_ORIGINS=https://t-data-901-crypto.vercel.app
 #
 # Déploiement (fait par le job "5 · Deploy") :
 #   docker compose -f .config/iac/prod/docker-compose.yml pull
 #   docker compose -f .config/iac/prod/docker-compose.yml up -d
+
+name: cryptoviz-prod
 
 services:
   api:
@@ -20,7 +23,7 @@ services:
     env_file:
       - .env.prod
     expose:
-      - "8000"
+      - "8000" # atteint par le Caddy de homepedia via le réseau partagé
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
@@ -28,34 +31,10 @@ services:
       retries: 3
       start_period: 10s
     networks:
-      - web
-
-  caddy:
-    image: caddy:2-alpine
-    container_name: cryptoviz-caddy
-    restart: unless-stopped
-    ports:
-      - "80:80" # requis pour le challenge HTTP-01 de Let's Encrypt
-      - "443:443"
-    # API_DOMAIN est injecté dans le conteneur via .env.prod ; le Caddyfile le
-    # lit avec {$API_DOMAIN}. (Pas d'interpolation ${...} au niveau compose :
-    # elle ne lirait pas env_file, seulement un fichier .env / le shell.)
-    # sslip.io résout <ip>.sslip.io vers l'IP -> certificat Let's Encrypt sans domaine.
-    env_file:
-      - .env.prod
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data # certificats — à persister absolument
-      - caddy_config:/config
-    depends_on:
-      - api
-    networks:
-      - web
-
-volumes:
-  caddy_data:
-  caddy_config:
+      - proxy
 
 networks:
-  web:
-    driver: bridge
+  # Réseau du Caddy existant (projet homepedia). Externe : déjà créé sur le VPS.
+  proxy:
+    external: true
+    name: homepedia-prod_default

@@ -1,27 +1,27 @@
-# Production — Frontend Vercel + API VPS (HTTPS)
+# Production — Frontend Vercel + API VPS (HTTPS via le Caddy existant)
 
-Topologie retenue :
+Le VPS héberge déjà un autre projet (« homepedia ») dont le **Caddy possède les
+ports 80/443**. On ne lance donc **pas** de second reverse proxy : notre API
+rejoint le réseau de ce Caddy, qui la publie en HTTPS.
 
 ```
 Navigateur
-   ├─ https://<projet>.vercel.app        → Frontend Next.js (Vercel)
-   └─ https://api.<ip>.sslip.io          → Caddy → API FastAPI (VPS)
-                                              └─ Postgres / Kafka / Airflow (VPS)
+   ├─ https://t-data-901-crypto.vercel.app     → Frontend Next.js (Vercel)
+   └─ https://api.91.134.132.149.sslip.io      → Caddy homepedia → cryptoviz-api:8000 (VPS)
 ```
 
-Le frontend est déployé **par Vercel** (intégration GitHub), pas par le job `5 · Deploy`.
-Le job `5 · Deploy` ne déploie que l'**API + Caddy** sur le VPS.
+- Frontend : déployé **par Vercel** (intégration GitHub).
+- API : déployée par le job `5 · Deploy` (conteneur `cryptoviz-api`, sans ports publiés).
+- HTTPS : géré par le **Caddy de homepedia** (Let's Encrypt), via un bloc de site.
 
 ---
 
-## 1. VPS — API en HTTPS
+## 1. VPS — préparer l'API
 
-### a. Cloner le dépôt sur le serveur
+### a. Cloner le dépôt (= `DEPLOY_PATH`)
 ```bash
 git clone https://github.com/Semakia/t-data-901-crypto_viz.git ~/cryptoviz
-cd ~/cryptoviz
 ```
-Ce chemin devient la variable `DEPLOY_PATH`.
 
 ### b. Créer `.config/iac/prod/.env.prod` (NON versionné)
 ```bash
@@ -33,72 +33,64 @@ SILVER_DB_HOST=...
 GOLD_DB_HOST=...
 # ... (mêmes clés que src/.env)
 
-# Domaine public de l'API — sslip.io résout <ip>.sslip.io vers l'IP,
-# ce qui permet d'obtenir un certificat Let's Encrypt sans acheter de domaine.
-API_DOMAIN=api.91.134.132.149.sslip.io
-
 # Origine autorisée pour le CORS = l'URL du frontend Vercel
-CORS_ORIGINS=https://<ton-projet>.vercel.app
+CORS_ORIGINS=https://t-data-901-crypto.vercel.app
 ```
 
-### c. Ouvrir les ports 80 et 443
-Le port **80 est obligatoire** pour le challenge HTTP-01 de Let's Encrypt.
+Le job `5 · Deploy` lance ensuite `cryptoviz-api` sur le réseau
+`homepedia-prod_default` (réseau externe du Caddy existant), sans publier de port.
 
-### d. Premier démarrage manuel (pour vérifier le certificat)
+---
+
+## 2. VPS — brancher l'API sur le Caddy de homepedia (une seule fois)
+
+Le Caddyfile de homepedia est un fichier hôte :
+`/home/ubuntu/T-DAT-902-PAR_5/iac/docker/prod/vps/Caddyfile`
+
+**a. Y ajouter ce bloc de site** (à la fin, sans toucher aux blocs existants) :
+```
+api.91.134.132.149.sslip.io {
+	reverse_proxy cryptoviz-api:8000
+}
+```
+
+**b. Recharger Caddy sans coupure** (après que `cryptoviz-api` tourne) :
 ```bash
-docker compose -f .config/iac/prod/docker-compose.yml up -d
-docker compose -f .config/iac/prod/docker-compose.yml logs -f caddy
-curl https://api.91.134.132.149.sslip.io/health
+docker exec homepedia-prod-caddy-1 caddy reload --config /etc/caddy/Caddyfile
 ```
 
----
+Caddy provisionne alors automatiquement le certificat Let's Encrypt pour le
+sous-domaine (il possède déjà 80/443, et sslip.io résout vers l'IP du VPS).
 
-## 2. Vercel — Frontend
-
-1. Vercel → **Add New Project** → importer le dépôt GitHub.
-2. **Root Directory** : `crypto-dashboard`
-3. Framework : Next.js (détecté automatiquement).
-4. **Environment Variables** :
-   - `NEXT_PUBLIC_API_URL` = `https://api.91.134.132.149.sslip.io`
-5. Déployer → Vercel fournit l'URL `https://<projet>.vercel.app`.
-
-Vercel redéploie ensuite automatiquement à chaque push sur `main`.
-
-> Reporter cette URL dans `CORS_ORIGINS` (`.env.prod`) **et** dans la variable
-> GitHub `APP_FRONTEND_URL`, puis redémarrer l'API.
+> Ordre important : déployer l'API **d'abord** (pour qu'elle soit résoluble sur
+> le réseau), **puis** ajouter le bloc + recharger Caddy.
 
 ---
 
-## 3. GitHub — Variables & secrets
+## 3. Vercel — Frontend
 
-**Variables** (Settings → Secrets and variables → Actions → *Variables*) :
+- Root Directory : `crypto-dashboard` · Framework : Next.js
+- Variable d'env : `NEXT_PUBLIC_API_URL = https://api.91.134.132.149.sslip.io`
+
+---
+
+## 4. GitHub — Variables & secrets
+
+**Variables** (Actions → Variables) :
 
 | Nom | Valeur |
 | --- | --- |
-| `DEPLOY_ENABLED` | `true` (débloque le job `deploy`) |
+| `DEPLOY_ENABLED` | `true` |
 | `DEPLOY_PATH` | `~/cryptoviz` |
 | `APP_API_URL` | `https://api.91.134.132.149.sslip.io` |
-| `APP_FRONTEND_URL` | `https://<projet>.vercel.app` |
+| `APP_FRONTEND_URL` | `https://t-data-901-crypto.vercel.app` |
 
-**Secrets** (Environment `production`) :
-
-| Nom | Valeur |
-| --- | --- |
-| `DEPLOY_HOST` | `91.134.132.149` |
-| `DEPLOY_USER` | utilisateur SSH du VPS |
-| `DEPLOY_SSH_KEY` | clé privée **brute** (`cat ~/.ssh/vps_key`, pas de base64) |
-
-La clé **publique** correspondante doit être dans `~/.ssh/authorized_keys` du serveur.
+**Secrets** (Environment `production`) : `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY`.
 
 ---
 
-## Ordre de mise en place
-
-1. VPS prêt (clone + `.env.prod` + ports ouverts + `up -d` manuel qui répond en HTTPS)
-2. Vercel déployé, URL récupérée
-3. `CORS_ORIGINS` mis à jour côté serveur, API redémarrée
-4. Variables/secrets GitHub renseignés
-5. **En dernier** : `DEPLOY_ENABLED=true` → le job `5 · Deploy` s'exécute au lieu d'être *skipped*
-
-> Mettre `DEPLOY_ENABLED=true` **avant** que le serveur soit prêt fera échouer le job
-> (au lieu de le sauter). C'est pour cela que c'est la dernière étape.
+## Vérification finale
+```bash
+docker compose -f .config/iac/prod/docker-compose.yml ps   # cryptoviz-api = Up (healthy)
+curl https://api.91.134.132.149.sslip.io/health
+```
