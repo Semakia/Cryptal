@@ -100,5 +100,30 @@ with DAG(
         },
     )
 
-    # ── Workflow : bronze -> silver -> gold
-    start >> build_price_series >> run_transform >> build_gold >> end
+    # ── ÉTAPE 4 : Gate qualité de données (silver + gold)
+    # Échoue le DAG si un contrôle bloquant casse (prix invalides, tables gold
+    # vides, corrélations hors [-1,1]...). La fraîcheur est un avertissement.
+    data_quality_check = BashOperator(
+        task_id="data_quality_check",
+        bash_command=(
+            f"python {SCRIPTS_PATH}/pipelines/quality/run_quality_checks.py"
+        ),
+        append_env=True,
+        env={
+            "SILVER_DB_HOST": "91.134.132.149",
+            "SILVER_DB_PORT": "5432",
+            "SILVER_DB_NAME": "crypto_viz_silver",
+            "SILVER_DB_USER": "cryptoviz",
+            "SILVER_DB_PASSWORD": "{{ var.value.silver_db_password }}",
+            "GOLD_DB_HOST": "91.134.132.149",
+            "GOLD_DB_PORT": "5432",
+            "GOLD_DB_NAME": "crypto_viz_gold",
+            "GOLD_DB_USER": "cryptoviz",
+            "GOLD_DB_PASSWORD": "{{ var.value.gold_db_password }}",
+            "QUALITY_MIN_COINS": "3",
+            "QUALITY_MAX_STALENESS_DAYS": "400",
+        },
+    )
+
+    # ── Workflow : bronze -> silver -> gold -> gate qualité
+    start >> build_price_series >> run_transform >> build_gold >> data_quality_check >> end

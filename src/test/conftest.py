@@ -12,6 +12,7 @@ _ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__
 
 for _p in (
     os.path.join(_ROOT, "src", "pipelines", "transform"),
+    os.path.join(_ROOT, "src", "pipelines", "quality"),
     os.path.join(_ROOT, "src", "api"),
 ):
     if _p not in sys.path:
