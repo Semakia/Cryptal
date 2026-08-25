@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { TourButton } from "@/components/shared/product-tour";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -93,7 +94,7 @@ export function Header() {
             value={period}
             onValueChange={(v) => setPeriod(v as typeof period)}
           >
-            <SelectTrigger className="w-24 h-9">
+            <SelectTrigger className="w-24 h-9" data-tour="period">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -102,6 +103,8 @@ export function Header() {
               <SelectItem value="30">30d</SelectItem>
             </SelectContent>
           </Select>
+
+          <TourButton />
 
           <Button
             variant="ghost"

@@ -11,8 +11,12 @@ export default function DashboardPage() {
           <p className="text-muted-foreground">Real-time cryptocurrency prices and market data</p>
         </div>
 
-        <PriceGrid />
-        <HistoricalChart />
+        <div data-tour="price-grid">
+          <PriceGrid />
+        </div>
+        <div data-tour="historical-chart">
+          <HistoricalChart />
+        </div>
       </div>
     </DashboardLayout>
   )
